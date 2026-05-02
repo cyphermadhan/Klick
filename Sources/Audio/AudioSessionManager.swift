@@ -20,7 +20,13 @@ final class AudioSessionManager: Sendable {
     }
 
     func activate() throws {
-        try AVAudioSession.sharedInstance().setActive(true, options: [])
+        let session = AVAudioSession.sharedInstance()
+        try session.setActive(true, options: [])
+        // `.voiceChat` mode defaults to the earpiece (phone-call style)
+        // even with `.defaultToSpeaker` set. Force the loudspeaker for
+        // walkie-talkie UX — the override still defers to wired headphones
+        // and Bluetooth headsets automatically when those are connected.
+        try session.overrideOutputAudioPort(.speaker)
     }
 
     func deactivate() {
