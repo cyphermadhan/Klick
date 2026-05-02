@@ -1,43 +1,41 @@
 @preconcurrency import AVFoundation
 import os
 
-/// Synthesizes the two classic walkie-talkie UI sounds and plays them
-/// locally when the PTT button is pressed and released:
+/// Plays the app's bundled walkie-talkie press/release sound files locally
+/// whenever the user grabs or releases the PTT button. The mp3s are decoded
+/// into PCM buffers at init time so button presses are instant — no disk
+/// I/O or decode latency when the user actually taps.
 ///
-///   • press  — a ~60 ms filtered-noise burst ("kkt" relay click)
-///   • release — a ~160 ms 1 kHz "roger beep" with fast attack and release
-///
-/// Both buffers are generated once at init and scheduled on a dedicated
-/// `AVAudioPlayerNode`, so these click/beeps mix *on top of* incoming
-/// audio without interfering with the received-audio scheduling queue.
-///
-/// The synth engine shares the app's AVAudioSession, which the PTT
-/// pipeline activates on start. Call `start()` when the session is live
-/// and `stop()` when it tears down.
+/// A dedicated `AVAudioPlayerNode` sits alongside the received-audio node,
+/// so these clicks mix *on top of* incoming voice rather than fighting
+/// for the same schedule queue.
 @MainActor
 final class WalkieSoundSynth {
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
-    private let format: AVAudioFormat
-    private let pressBuffer: AVAudioPCMBuffer
-    private let releaseBuffer: AVAudioPCMBuffer
+    private let pressBuffer: AVAudioPCMBuffer?
+    private let releaseBuffer: AVAudioPCMBuffer?
+    private let playbackFormat: AVAudioFormat
     private let log = Logger(subsystem: "com.klick.walkietalkie", category: "WalkieSoundSynth")
 
     init() {
-        // 44.1 kHz mono Float32 — doesn't need to match the Opus pipeline's
-        // 48 kHz format; the engine's mixer upsamples to the output as needed.
-        guard let fmt = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1) else {
-            fatalError("Failed to allocate synth audio format")
-        }
-        self.format = fmt
-        self.pressBuffer = Self.makePressBuffer(format: fmt)
-        self.releaseBuffer = Self.makeReleaseBuffer(format: fmt)
+        let press = Self.loadBuffer(name: "walkie-press")
+        let release = Self.loadBuffer(name: "walkie-release")
+        self.pressBuffer = press
+        self.releaseBuffer = release
+
+        // Connect using whichever buffer format is available; fall back to
+        // a generic 44.1 kHz stereo format if both files failed to load
+        // (in which case playback is silently a no-op).
+        self.playbackFormat = press?.format
+            ?? release?.format
+            ?? AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2)!
     }
 
     func start() {
         guard !engine.isRunning else { return }
         engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: format)
+        engine.connect(player, to: engine.mainMixerNode, format: playbackFormat)
         engine.prepare()
         do {
             try engine.start()
@@ -53,76 +51,49 @@ final class WalkieSoundSynth {
     }
 
     func playPress() {
-        scheduleOneShot(pressBuffer)
+        schedule(pressBuffer)
     }
 
     func playRelease() {
-        scheduleOneShot(releaseBuffer)
+        schedule(releaseBuffer)
     }
 
-    private func scheduleOneShot(_ buffer: AVAudioPCMBuffer) {
-        guard engine.isRunning else { return }
-        // Use `.interrupts` so rapid press/release taps don't queue up and
-        // play out of sync with the user's actual button state.
+    private func schedule(_ buffer: AVAudioPCMBuffer?) {
+        guard engine.isRunning, let buffer else { return }
+        // `.interrupts` — a new press/release cancels anything still playing
+        // on this node so rapid tap-tap-tap stays in sync with button state.
         player.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
     }
 
-    // MARK: - Buffer generators
+    // MARK: - Asset loader
 
-    /// The key-up click: ~60 ms of white noise with a steep decay envelope,
-    /// lightly low-passed (via simple one-pole IIR) so it sounds like a
-    /// mechanical relay snap rather than harsh hiss.
-    private static func makePressBuffer(format: AVAudioFormat) -> AVAudioPCMBuffer {
-        let sr = Float(format.sampleRate)
-        let duration: Float = 0.060
-        let frameCount = AVAudioFrameCount(sr * duration)
-        let buf = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount)!
-        buf.frameLength = frameCount
-        let samples = buf.floatChannelData![0]
-
-        // One-pole low-pass state; cutoff around 3 kHz.
-        let alpha: Float = 0.45
-        var last: Float = 0
-
-        let total = Int(frameCount)
-        for i in 0..<total {
-            let raw = Float.random(in: -1...1)
-            // Low-pass filter: y[n] = α*x[n] + (1-α)*y[n-1]
-            let filtered = alpha * raw + (1 - alpha) * last
-            last = filtered
-            // Exponential amplitude decay for a "click" shape.
-            let t = Float(i) / Float(total)
-            let env = exp(-5 * t)
-            samples[i] = filtered * env * 0.35
+    /// Reads a bundled audio file (any AVAudioFile-supported format) into a
+    /// fully-populated PCM buffer. Returns nil on any failure — callers
+    /// treat missing buffers as silent no-ops.
+    private static func loadBuffer(name: String) -> AVAudioPCMBuffer? {
+        // Try mp3 first, then wav as a fallback in case the asset format changes later.
+        let candidates: [(String, String)] = [(name, "mp3"), (name, "wav"), (name, "m4a"), (name, "caf")]
+        for (resource, ext) in candidates {
+            if let url = Bundle.main.url(forResource: resource, withExtension: ext) {
+                if let buffer = loadPCM(from: url) {
+                    return buffer
+                }
+            }
         }
-        return buf
+        return nil
     }
 
-    /// The key-down "roger beep": ~160 ms of a 1 kHz sine with 5 ms attack
-    /// and 40 ms release to avoid audible pops at the edges.
-    private static func makeReleaseBuffer(format: AVAudioFormat) -> AVAudioPCMBuffer {
-        let sr = Float(format.sampleRate)
-        let duration: Float = 0.16
-        let freq: Float = 1_000
-        let frameCount = AVAudioFrameCount(sr * duration)
-        let buf = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount)!
-        buf.frameLength = frameCount
-        let samples = buf.floatChannelData![0]
-
-        let total = Int(frameCount)
-        let attack = Int(sr * 0.005)
-        let release = Int(sr * 0.040)
-        let peak: Float = 0.28
-
-        for i in 0..<total {
-            var env: Float = peak
-            if i < attack {
-                env *= Float(i) / Float(attack)
-            } else if i > total - release {
-                env *= Float(total - i) / Float(release)
-            }
-            samples[i] = sin(2 * .pi * freq * Float(i) / sr) * env
+    private static func loadPCM(from url: URL) -> AVAudioPCMBuffer? {
+        do {
+            let file = try AVAudioFile(forReading: url)
+            guard let buffer = AVAudioPCMBuffer(
+                pcmFormat: file.processingFormat,
+                frameCapacity: AVAudioFrameCount(file.length)
+            ) else { return nil }
+            try file.read(into: buffer)
+            return buffer
+        } catch {
+            return nil
         }
-        return buf
     }
 }
