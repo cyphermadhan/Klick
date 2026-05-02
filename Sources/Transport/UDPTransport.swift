@@ -160,13 +160,17 @@ final class UDPTransport: @unchecked Sendable {
     }
 
     private func receiveNext(on connection: NWConnection) {
-        connection.receiveMessage { [weak self] data, _, isComplete, error in
+        // `receiveMessage` on a UDP connection delivers one datagram per call.
+        // Apple always sets `isComplete = true` on UDP (each datagram is its
+        // own complete message) — that flag does NOT mean the listener should
+        // close. We must re-arm the receive after every packet, stopping only
+        // on a hard error, otherwise we stop hearing anything after packet #1.
+        connection.receiveMessage { [weak self] data, _, _, error in
             guard let self else { return }
             if let data, !data.isEmpty {
                 do {
                     let pkt = try Packet.decode(data)
-                    let endpoint = connection.endpoint
-                    self.onReceive?(pkt, endpoint)
+                    self.onReceive?(pkt, connection.endpoint)
                 } catch {
                     self.log.error("Packet decode failed: \(String(describing: error))")
                 }
@@ -175,9 +179,7 @@ final class UDPTransport: @unchecked Sendable {
                 self.log.error("Receive error: \(String(describing: error))")
                 return
             }
-            if !isComplete {
-                self.receiveNext(on: connection)
-            }
+            self.receiveNext(on: connection)
         }
     }
 }
