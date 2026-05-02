@@ -28,6 +28,7 @@
 		8E1482CF5F4483DD6CA8E57F /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4045B919AD46557F838BDBBB /* QRScannerView.swift */; };
 		93B13E1AEADBEF47408EBC56 /* BonjourService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB706EA5A5ECBAA766075A40 /* BonjourService.swift */; };
 		9557B8C695584B3460512165 /* TerminalPrimitives.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1924C9590896525252C40975 /* TerminalPrimitives.swift */; };
+		9D6C68FDB9B040807CCC341C /* WalkieSoundSynth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1194D5F6D2D793BC254F8030 /* WalkieSoundSynth.swift */; };
 		9DC8A22C5490F0148FD141CB /* UDPTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 561CAAE8F8BA1119FE9F3BE2 /* UDPTransportTests.swift */; };
 		9E71EB74D14E81517354128D /* AudioFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07A18E285A46AFD4B89DA13 /* AudioFormats.swift */; };
 		A4F3899B4353671104778B67 /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593ECCC1D50AFE1E44412A75 /* PairingView.swift */; };
@@ -36,7 +37,6 @@
 		B6B205646942B8D15EE856EC /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE9CDCBD54800B6E311D43E4 /* PairingService.swift */; };
 		BE332EEDDCB1597F85E23FC1 /* FloatRingBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0042BDAE89A07CEDBB04A13F /* FloatRingBuffer.swift */; };
 		CB26ADE68C49A593EA4C5A60 /* PlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9193F23368BF96F81A31FE6 /* PlaceholderTests.swift */; };
-		CB7C307B55E58BC022A71CD0 /* PTTSoundEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 735527F5C9A1A5A4638CEC2F /* PTTSoundEffects.swift */; };
 		CCDC171F4AD1D0C253EFC78D /* PacketProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D4DF722DF45FA209A83E52 /* PacketProtocolTests.swift */; };
 		E8627942B33C1DFF570F9D97 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5175E2F69B839DA270028666 /* ContentView.swift */; };
 		F0265FE059603C5DBDF7B26B /* DeviceName.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2EB139E5DAF6727F1DECCA /* DeviceName.swift */; };
@@ -55,6 +55,7 @@
 
 /* Begin PBXFileReference section */
 		0042BDAE89A07CEDBB04A13F /* FloatRingBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatRingBuffer.swift; sourceTree = "<group>"; };
+		1194D5F6D2D793BC254F8030 /* WalkieSoundSynth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkieSoundSynth.swift; sourceTree = "<group>"; };
 		1924C9590896525252C40975 /* TerminalPrimitives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalPrimitives.swift; sourceTree = "<group>"; };
 		24F9F7075BF0CBD5936B27B3 /* PairingServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingServiceTests.swift; sourceTree = "<group>"; };
 		31D92DC755347C58E2A1EA8E /* PTTButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTTButton.swift; sourceTree = "<group>"; };
@@ -71,7 +72,6 @@
 		593ECCC1D50AFE1E44412A75 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
 		5CF009A346558102CD7C2F62 /* KeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyStore.swift; sourceTree = "<group>"; };
 		664E28E3CC3376687990CF23 /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
-		735527F5C9A1A5A4638CEC2F /* PTTSoundEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTTSoundEffects.swift; sourceTree = "<group>"; };
 		7A0583F38620AC167707A313 /* PeerInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerInfo.swift; sourceTree = "<group>"; };
 		B3487E4571D3BA54FB2F1392 /* OpusCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCodecTests.swift; sourceTree = "<group>"; };
 		BEB5DB57551EC93FCD9CEE48 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
@@ -227,7 +227,7 @@
 				DD7AEBD2032D394D3C99D7BB /* AudioUtils.swift */,
 				0042BDAE89A07CEDBB04A13F /* FloatRingBuffer.swift */,
 				ED4ED19742399D5262CF8232 /* OpusCodec.swift */,
-				735527F5C9A1A5A4638CEC2F /* PTTSoundEffects.swift */,
+				1194D5F6D2D793BC254F8030 /* WalkieSoundSynth.swift */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -348,7 +348,6 @@
 				0ABF68CD2B92805123B0C658 /* OpusCodec.swift in Sources */,
 				083A5E2A6C3D60E03F401E90 /* PTTButton.swift in Sources */,
 				83E91A63C870247403FAA572 /* PTTSession.swift in Sources */,
-				CB7C307B55E58BC022A71CD0 /* PTTSoundEffects.swift in Sources */,
 				3170125412DFF2ABEC26B16B /* PacketProtocol.swift in Sources */,
 				B6B205646942B8D15EE856EC /* PairingService.swift in Sources */,
 				A4F3899B4353671104778B67 /* PairingView.swift in Sources */,
@@ -358,6 +357,7 @@
 				327A4878E68047113688E600 /* SettingsView.swift in Sources */,
 				9557B8C695584B3460512165 /* TerminalPrimitives.swift in Sources */,
 				4C6F091CB42311307AD61F1B /* UDPTransport.swift in Sources */,
+				9D6C68FDB9B040807CCC341C /* WalkieSoundSynth.swift in Sources */,
 				AF82CDC7B6DAFA124CA9313C /* WalkieTalkieApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

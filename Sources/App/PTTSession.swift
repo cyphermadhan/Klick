@@ -52,6 +52,7 @@ final class PTTSession: ObservableObject {
     let browser = BonjourBrowser()
     private let crypto = CryptoService()
     private let pairing = PairingService()
+    private let sounds = WalkieSoundSynth()
     private let log = Logger(subsystem: "com.klick.walkietalkie", category: "PTTSession")
 
     private var sharedKey: Data?
@@ -96,6 +97,9 @@ final class PTTSession: ObservableObject {
             try transport.start(advertisingAs: name)
             browser.selfName = name
             browser.start()
+            // Synth engine piggybacks on the already-active AVAudioSession;
+            // starting it here means the first PTT press has no warm-up delay.
+            sounds.start()
             isRunning = true
             log.info("PTT session running as \(name, privacy: .public)")
         } catch {
@@ -110,8 +114,15 @@ final class PTTSession: ObservableObject {
         pipeline.stop()
         transport.stop()
         browser.stop()
+        sounds.stop()
         isRunning = false
     }
+
+    /// Plays the "key up" click locally. Call on button press.
+    func playPressSound() { sounds.playPress() }
+
+    /// Plays the "roger beep" locally. Call on button release.
+    func playReleaseSound() { sounds.playRelease() }
 
     // MARK: - PTT
 

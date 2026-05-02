@@ -37,11 +37,11 @@ struct ContentView: View {
                     outboundLevel: session.outboundLevel,
                     inboundLevel: session.inboundLevel,
                     onBegin: {
-                        PTTSoundEffects.playBegin()
+                        session.playPressSound()
                         session.beginTransmit()
                     },
                     onEnd: {
-                        PTTSoundEffects.playEnd()
+                        session.playReleaseSound()
                         session.endTransmit()
                     }
                 )
@@ -138,7 +138,10 @@ struct ContentView: View {
     // MARK: - Status tiles
 
     private var statusTiles: some View {
-        HStack(spacing: 10) {
+        // `.top` alignment: one tile's subtitle may wrap to two lines while
+        // another stays at one — without this the HStack centers each tile
+        // vertically and the short ones sag below the tall ones.
+        HStack(alignment: .top, spacing: 10) {
             StatusTile(
                 title: "LINK",
                 subtitle: session.isRunning ? "STACK UP · BONJOUR ACTIVE" : "TAP START TO GO LIVE",
