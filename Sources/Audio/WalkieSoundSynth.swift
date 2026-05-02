@@ -1,99 +1,77 @@
 @preconcurrency import AVFoundation
 import os
 
-/// Plays the app's bundled walkie-talkie press/release sound files locally
-/// whenever the user grabs or releases the PTT button. The mp3s are decoded
-/// into PCM buffers at init time so button presses are instant — no disk
-/// I/O or decode latency when the user actually taps.
+/// Plays the bundled walkie press/release sounds.
 ///
-/// A dedicated `AVAudioPlayerNode` sits alongside the received-audio node,
-/// so these clicks mix *on top of* incoming voice rather than fighting
-/// for the same schedule queue.
+/// Uses `AVAudioPlayer` rather than a custom `AVAudioEngine` setup because
+/// it handles MP3 decoding natively, manages its own playback lifecycle,
+/// and respects the shared `AVAudioSession` the PTT pipeline configures —
+/// no fragile engine wiring or buffer-format dance.
+///
+/// The two players are preloaded at init (via `prepareToPlay`) so taps
+/// are instant.
 @MainActor
 final class WalkieSoundSynth {
-    private let engine = AVAudioEngine()
-    private let player = AVAudioPlayerNode()
-    private let pressBuffer: AVAudioPCMBuffer?
-    private let releaseBuffer: AVAudioPCMBuffer?
-    private let playbackFormat: AVAudioFormat
+    private var pressPlayer: AVAudioPlayer?
+    private var releasePlayer: AVAudioPlayer?
     private let log = Logger(subsystem: "com.klick.walkietalkie", category: "WalkieSoundSynth")
 
     init() {
-        let press = Self.loadBuffer(name: "walkie-press")
-        let release = Self.loadBuffer(name: "walkie-release")
-        self.pressBuffer = press
-        self.releaseBuffer = release
+        pressPlayer = makePlayer(name: "walkie-press")
+        releasePlayer = makePlayer(name: "walkie-release")
 
-        // Connect using whichever buffer format is available; fall back to
-        // a generic 44.1 kHz stereo format if both files failed to load
-        // (in which case playback is silently a no-op).
-        self.playbackFormat = press?.format
-            ?? release?.format
-            ?? AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2)!
+        if pressPlayer == nil {
+            log.error("walkie-press audio asset missing from bundle")
+        }
+        if releasePlayer == nil {
+            log.error("walkie-release audio asset missing from bundle")
+        }
     }
 
     func start() {
-        guard !engine.isRunning else { return }
-        engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: playbackFormat)
-        engine.prepare()
-        do {
-            try engine.start()
-            player.play()
-        } catch {
-            log.error("Synth engine start failed: \(String(describing: error))")
-        }
+        pressPlayer?.prepareToPlay()
+        releasePlayer?.prepareToPlay()
     }
 
     func stop() {
-        player.stop()
-        engine.stop()
+        pressPlayer?.stop()
+        releasePlayer?.stop()
     }
 
     func playPress() {
-        schedule(pressBuffer)
+        restart(pressPlayer)
     }
 
     func playRelease() {
-        schedule(releaseBuffer)
+        restart(releasePlayer)
     }
 
-    private func schedule(_ buffer: AVAudioPCMBuffer?) {
-        guard engine.isRunning, let buffer else { return }
-        // `.interrupts` — a new press/release cancels anything still playing
-        // on this node so rapid tap-tap-tap stays in sync with button state.
-        player.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
+    private func restart(_ player: AVAudioPlayer?) {
+        guard let player else { return }
+        // Rewind first so rapid press/release taps never miss because a
+        // previous playback is still in-flight.
+        player.currentTime = 0
+        player.volume = 1.0
+        player.play()
     }
 
-    // MARK: - Asset loader
+    // MARK: - Loader
 
-    /// Reads a bundled audio file (any AVAudioFile-supported format) into a
-    /// fully-populated PCM buffer. Returns nil on any failure — callers
-    /// treat missing buffers as silent no-ops.
-    private static func loadBuffer(name: String) -> AVAudioPCMBuffer? {
-        // Try mp3 first, then wav as a fallback in case the asset format changes later.
-        let candidates: [(String, String)] = [(name, "mp3"), (name, "wav"), (name, "m4a"), (name, "caf")]
-        for (resource, ext) in candidates {
-            if let url = Bundle.main.url(forResource: resource, withExtension: ext) {
-                if let buffer = loadPCM(from: url) {
-                    return buffer
-                }
+    /// Try common audio-asset extensions in order. First file that loads
+    /// wins. Anything missing falls through to `nil` and that sound just
+    /// becomes a silent no-op rather than a crash.
+    private func makePlayer(name: String) -> AVAudioPlayer? {
+        for ext in ["mp3", "m4a", "wav", "caf"] {
+            guard let url = Bundle.main.url(forResource: name, withExtension: ext) else { continue }
+            do {
+                let player = try AVAudioPlayer(contentsOf: url)
+                player.prepareToPlay()
+                player.volume = 1.0
+                return player
+            } catch {
+                log.error("Failed to load \(name).\(ext): \(String(describing: error))")
             }
         }
         return nil
-    }
-
-    private static func loadPCM(from url: URL) -> AVAudioPCMBuffer? {
-        do {
-            let file = try AVAudioFile(forReading: url)
-            guard let buffer = AVAudioPCMBuffer(
-                pcmFormat: file.processingFormat,
-                frameCapacity: AVAudioFrameCount(file.length)
-            ) else { return nil }
-            try file.read(into: buffer)
-            return buffer
-        } catch {
-            return nil
-        }
     }
 }

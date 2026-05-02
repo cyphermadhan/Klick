@@ -25,6 +25,29 @@ final class AudioCapture {
         try AudioSessionManager.shared.activate()
 
         let inputNode = engine.inputNode
+
+        // Enable Apple's voice-processing IO on the mic path:
+        //   • acoustic echo cancellation — so the loudspeaker output doesn't
+        //     bleed back into the mic and get re-transmitted
+        //   • automatic gain control + noise suppression for a cleaner signal
+        //
+        // We do this on the input node directly rather than via the session's
+        // `.voiceChat` / `.videoChat` mode because those modes force the
+        // session onto the ring-volume channel (quieter playback). Enabling
+        // voice processing here gives us the same signal cleanup while
+        // leaving playback on the media-volume channel.
+        //
+        // Must be called *before* installing a tap — changing voice-processing
+        // state after tap install throws.
+        if #available(iOS 13.0, *) {
+            do {
+                try inputNode.setVoiceProcessingEnabled(true)
+            } catch {
+                log.error("Voice processing enable failed: \(String(describing: error))")
+                // Non-fatal — mic still works, just without echo cancellation.
+            }
+        }
+
         let hwFormat = inputNode.outputFormat(forBus: 0)
 
         // If hardware format differs from our target, build a PCM→PCM converter.
