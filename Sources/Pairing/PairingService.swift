@@ -37,6 +37,39 @@ final class PairingService: Sendable {
         return (key, qrPayload(for: key))
     }
 
+    /// If a key is already stored, return it. Otherwise mint a fresh one and
+    /// store it. Prefer this over `generateAndStoreKey` during normal opens
+    /// of the pair screen — re-opening to display the code should NOT
+    /// overwrite the already-paired key.
+    func loadOrGenerateKey() throws -> (key: Data, qrPayload: String) {
+        if let existing = try store.load(), existing.count == CryptoService.keyBytes {
+            return (existing, qrPayload(for: existing))
+        }
+        return try generateAndStoreKey()
+    }
+
+    /// Short, human-verifiable fingerprint for a key. Same format used on
+    /// both sides so two devices can eyeball that the hex groups match.
+    /// Returns "A1B2.C3D4" style (64 bits of the key).
+    static func fingerprint(of key: Data) -> String {
+        let prefix = key.prefix(8)
+        let hex = prefix.map { String(format: "%02X", $0) }.joined()
+        let groups = stride(from: 0, to: hex.count, by: 4).map { i -> String in
+            let start = hex.index(hex.startIndex, offsetBy: i)
+            let end = hex.index(start, offsetBy: min(4, hex.count - i))
+            return String(hex[start..<end])
+        }
+        return groups.joined(separator: ".")
+    }
+
+    /// Fingerprint for the currently stored key, or nil if unpaired.
+    func currentKeyFingerprint() -> String? {
+        guard let key = try? store.load(), key.count == CryptoService.keyBytes else {
+            return nil
+        }
+        return Self.fingerprint(of: key)
+    }
+
     func qrPayload(for key: Data) -> String {
         "\(Self.scheme):\(Self.version):\(key.base64URLEncoded())"
     }

@@ -19,6 +19,10 @@ final class PTTSession: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var isTransmitting = false
     @Published private(set) var isPaired = false
+    /// Human-checkable fingerprint of the currently-stored shared key.
+    /// Displayed on the main screen so users can confirm both phones have
+    /// identical keys without re-opening the pairing sheet.
+    @Published private(set) var keyFingerprint: String?
     @Published var selectedPeer: PeerInfo?
     @Published private(set) var errorMessage: String?
     @Published private(set) var lastIncomingSequence: UInt32?
@@ -53,7 +57,9 @@ final class PTTSession: ObservableObject {
     private var sharedKey: Data?
 
     init() {
-        self.isPaired = (try? pairing.currentKey()) != nil
+        let existingKey = try? pairing.currentKey()
+        self.isPaired = existingKey != nil
+        self.keyFingerprint = existingKey.map(PairingService.fingerprint(of:))
         self.pipeline.loopback = false
         wireAudioToTransport()
         wireTransportToAudio()
@@ -71,6 +77,7 @@ final class PTTSession: ObservableObject {
         do {
             sharedKey = try pairing.currentKey()
             isPaired = sharedKey != nil
+            keyFingerprint = sharedKey.map(PairingService.fingerprint(of:))
         } catch {
             errorMessage = "Key load failed: \(error.localizedDescription)"
             return

@@ -151,7 +151,11 @@ struct ContentView: View {
 
             StatusTile(
                 title: "PAIR",
-                subtitle: session.isPaired ? "KEY LOADED · XSALSA20" : "NO KEY · PAIR TO ENCRYPT",
+                // Show the fingerprint here so two paired phones can be
+                // verified at a glance — both should read the same hex groups.
+                subtitle: session.isPaired
+                    ? "FPRINT · \(session.keyFingerprint ?? "----")"
+                    : "NO KEY · PAIR TO ENCRYPT",
                 accent: session.isPaired ? DT.ok : DT.warn,
                 active: session.isPaired
             ) {

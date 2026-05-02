@@ -80,6 +80,9 @@ private struct DisplayPane: View {
     @State private var qrImage: UIImage?
     @State private var keyFingerprint: String = ""
     @State private var errorMessage: String?
+    /// True if we reused an existing key on appear. The "NEW KEY" button
+    /// flips it to false and makes clear the user minted a fresh one.
+    @State private var usedExistingKey: Bool = true
 
     var body: some View {
         VStack(spacing: 16) {
@@ -110,18 +113,36 @@ private struct DisplayPane: View {
                         DotLeader(label: "MAC", value: "POLY1305")
                         DotLeader(label: "BITS", value: "256")
                         DotLeader(label: "FPRINT", value: keyFingerprint, valueColor: DT.info)
+                        DotLeader(
+                            label: "STATE",
+                            value: usedExistingKey ? "REUSED" : "FRESH",
+                            valueColor: usedExistingKey ? DT.ok : DT.warn
+                        )
                     }
                 }
             }
 
-            Text("POINT THE OTHER DEVICE'S CAMERA AT THIS CODE.")
+            Text(usedExistingKey
+                 ? "SHOWING YOUR ALREADY-PAIRED KEY. BOTH PHONES MUST READ THE SAME FPRINT."
+                 : "NEW KEY MINTED. HAVE THE OTHER PHONE SCAN IT BEFORE TRANSMITTING.")
                 .walkieCaption()
                 .foregroundStyle(DT.textDim)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            Button(action: regenerate) {
+                Text("NEW KEY · OVERWRITES EXISTING")
+                    .walkieLabel(11)
+                    .foregroundStyle(DT.warn)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .overlay(Rectangle().strokeBorder(DT.warn.opacity(0.6), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
 
             Spacer()
         }
-        .onAppear(perform: generate)
+        .onAppear(perform: loadExistingOrGenerate)
     }
 
     private var cornerMarks: some View {
@@ -135,29 +156,29 @@ private struct DisplayPane: View {
         }
     }
 
-    private func generate() {
+    /// On open, prefer reusing the already-stored key. Regenerating on every
+    /// open was the cause of mismatched keys — if both phones opened this
+    /// tab, each would overwrite the other's stored key.
+    private func loadExistingOrGenerate() {
         do {
-            let (key, payload) = try service.generateAndStoreKey()
+            let (key, payload) = try service.loadOrGenerateKey()
             qrImage = try service.renderQR(payload: payload, side: 220)
-            keyFingerprint = Self.fingerprint(of: key)
+            keyFingerprint = PairingService.fingerprint(of: key)
+            usedExistingKey = (try? service.currentKey()) == key
         } catch {
             errorMessage = "GEN FAIL: \(error.localizedDescription)"
         }
     }
 
-    /// Short human-checkable fingerprint for the key, in the terminal style
-    /// (groups of 4 hex chars separated by dots). Not used for verification —
-    /// purely so the user can eyeball that the two sides match.
-    private static func fingerprint(of key: Data) -> String {
-        let prefix = key.prefix(8)
-        let hex = prefix.map { String(format: "%02X", $0) }.joined()
-        // Re-chunk into groups of 4 for readability.
-        let groups = stride(from: 0, to: hex.count, by: 4).map { i -> String in
-            let start = hex.index(hex.startIndex, offsetBy: i)
-            let end = hex.index(start, offsetBy: min(4, hex.count - i))
-            return String(hex[start..<end])
+    private func regenerate() {
+        do {
+            let (key, payload) = try service.generateAndStoreKey()
+            qrImage = try service.renderQR(payload: payload, side: 220)
+            keyFingerprint = PairingService.fingerprint(of: key)
+            usedExistingKey = false
+        } catch {
+            errorMessage = "GEN FAIL: \(error.localizedDescription)"
         }
-        return groups.joined(separator: ".")
     }
 }
 
@@ -254,7 +275,21 @@ private struct ScanPane: View {
                 Text("KEY INSTALLED")
                     .walkieLabel(16, weight: .bold, tracking: 3)
                     .foregroundStyle(DT.text)
-                Text("SECURE LINK READY. RETURN TO MAIN SCREEN TO SELECT A PEER.")
+                if let key = scannedKey {
+                    // Showing the fingerprint lets the user cross-check with
+                    // the displaying phone — if the hex groups don't match,
+                    // pairing went sideways and they can try again.
+                    VStack(spacing: 4) {
+                        Text("FPRINT")
+                            .walkieCaption()
+                            .foregroundStyle(DT.textDim)
+                        Text(PairingService.fingerprint(of: key))
+                            .font(DT.mono(14, weight: .bold))
+                            .foregroundStyle(DT.info)
+                            .tracking(1)
+                    }
+                }
+                Text("COMPARE FPRINT ON BOTH PHONES. IF THEY MATCH, YOU'RE GOOD.")
                     .walkieCaption()
                     .foregroundStyle(DT.textDim)
                     .multilineTextAlignment(.center)
