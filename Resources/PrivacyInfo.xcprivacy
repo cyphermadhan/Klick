@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Privacy manifest. Required for App Store / TestFlight submission
+        since 2024-05. Declares which "required-reason" APIs the app uses,
+        what data it collects, and any tracking behaviour.
+
+        Walkie:
+          • Does not collect any user data (voice is peer-to-peer, encrypted,
+            never leaves the two devices).
+          • Does not track users across apps or sites.
+          • Uses UserDefaults only to persist the device's own name (reason
+            CA92.1 — "Access info from the same app"). Keychain is used for
+            the shared encryption key; Apple does not require a manifest
+            reason for Keychain.
+    -->
+
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <!-- CA92.1: Access info from the same app, per documentation. -->
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

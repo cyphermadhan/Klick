@@ -7,6 +7,10 @@ options:
   groupSortPosition: top
   generateEmptyDirectories: true
 
+configs:
+  Debug: debug
+  Release: release
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -16,9 +20,32 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "16.0"
     TARGETED_DEVICE_FAMILY: "1"
     ENABLE_PREVIEWS: "YES"
-    DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
-    CODE_SIGN_IDENTITY: "Apple Development"
+    # DEVELOPMENT_TEAM intentionally NOT set here — it lives in
+    # Signing.xcconfig (gitignored), so the repo stays team-agnostic.
+  configs:
+    Debug:
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      SWIFT_COMPILATION_MODE: singlefile
+      GCC_OPTIMIZATION_LEVEL: "0"
+      GCC_PREPROCESSOR_DEFINITIONS: ["DEBUG=1"]
+      ENABLE_TESTABILITY: "YES"
+      ONLY_ACTIVE_ARCH: "YES"
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+      SWIFT_COMPILATION_MODE: wholemodule
+      GCC_OPTIMIZATION_LEVEL: "s"
+      DEAD_CODE_STRIPPING: "YES"
+      ENABLE_NS_ASSERTIONS: "NO"
+      STRIP_INSTALLED_PRODUCT: "YES"
+      COPY_PHASE_STRIP: "NO"  # strip at link, not copy — preserves symbols for crash reports
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+      VALIDATE_PRODUCT: "YES"
+      # CODE_SIGN_IDENTITY is NOT set explicitly: automatic signing
+      # (CODE_SIGN_STYLE=Automatic) picks the right cert per destination —
+      # "Apple Development" for local builds, "Apple Distribution" for
+      # archives going to TestFlight / App Store. Setting the identity
+      # manually here would fight with that logic.
 
 packages:
   Sodium:
@@ -29,16 +56,26 @@ targets:
   WalkieTalkie:
     type: application
     platform: iOS
+    # Both configs read Signing.xcconfig — a gitignored file the developer
+    # copies from Signing.xcconfig.example and fills with their team ID.
+    # The file can be missing on CI / fresh checkouts; Xcode treats a
+    # missing xcconfig as empty, so unsigned builds still work for local dev.
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
     sources:
       - path: Sources
       # Resources live alongside source files in XcodeGen — there is no
       # separate `resources:` key. The target's Copy Bundle Resources
       # phase picks up any non-code files XcodeGen adds, classified by
-      # extension. The mp3 assets are listed explicitly so they can't be
-      # missed by a directory scan.
+      # extension. Listed explicitly so they can't be missed by a scan.
       - path: Resources/walkie-press.mp3
         buildPhase: resources
       - path: Resources/walkie-release.mp3
+        buildPhase: resources
+      - path: Resources/Assets.xcassets
+        buildPhase: resources
+      - path: Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
     info:
       path: Resources/Info.plist
@@ -54,6 +91,12 @@ targets:
         NSCameraUsageDescription: Used to scan pairing QR codes.
         NSBonjourServices:
           - _walkie._udp.
+        # Export compliance. The app uses standard cryptography (libsodium
+        # crypto_secretbox: XSalsa20 + Poly1305) purely to protect user
+        # data (voice packets) — which qualifies for the primary exemption
+        # under US EAR 740.17(b). Declaring NO means we don't need a year
+        # review submission with each TestFlight build.
+        ITSAppUsesNonExemptEncryption: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIRequiresFullScreen: true
@@ -69,6 +112,11 @@ targets:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         GENERATE_INFOPLIST_FILE: "NO"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # iPhone only — Xcode's project-level default is "1,2" which leaks
+        # into TestFlight as "iPad supported" unless explicitly overridden
+        # here on the target as well.
+        TARGETED_DEVICE_FAMILY: "1"
 
   WalkieTalkieTests:
     type: bundle.unit-test

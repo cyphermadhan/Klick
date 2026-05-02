@@ -25,3 +25,11 @@ Carthage/Build/
 *.p12
 .env
 .env.local
+
+# Signing — local team ID lives in Signing.xcconfig (copy from .example)
+# so it stays out of source control.
+Signing.xcconfig
+
+# xcarchive output
+*.xcarchive
+*.ipa

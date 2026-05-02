@@ -1,0 +1,19 @@
+// Walkie — signing overrides
+//
+// Copy this file to `Signing.xcconfig` (no `.example`) and fill in your
+// Apple Developer team ID. `Signing.xcconfig` is gitignored so the ID
+// never lands in the public repo.
+//
+// Your team ID is the 10-character alphanumeric string visible at
+// https://developer.apple.com/account under "Membership details".
+
+DEVELOPMENT_TEAM = XXXXXXXXXX
+
+// Optional: if you want to distribute under a different bundle identifier
+// (e.g. your own reverse-DNS prefix) uncomment and set here.
+//
+// PRODUCT_BUNDLE_IDENTIFIER = com.example.walkietalkie
+
+// For TestFlight archives. Xcode's "Automatic" signing will pick the
+// right identity when a team ID is set.
+CODE_SIGN_STYLE = Automatic
