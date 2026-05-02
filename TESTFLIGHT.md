@@ -1,164 +1,283 @@
-# TestFlight release guide
+# TestFlight release — step-by-step
 
-End-to-end path from a fresh clone to a TestFlight build ready to distribute to testers.
+Hand-holding walkthrough from a fresh clone to testers installing via TestFlight. Assumes you already have an **Apple Developer Program** membership ($99/yr) and **Xcode** installed.
 
-## Prerequisites
+---
 
-- Apple Developer Program membership ($99/yr) — required to upload to App Store Connect.
-- Xcode 15 or later signed into your Apple ID (Xcode → Settings → Accounts).
-- XcodeGen installed: `brew install xcodegen`.
-- An iPhone to install the build on. Simulator can't capture mic audio — TestFlight doesn't run on simulator anyway.
+## Short answer to common questions
 
-## One-time Apple setup
+> **Do I need App Groups?** No. App Groups are for sharing data between a main app and its extensions (Widgets, Share Extensions, etc.). Walkie has no extensions, so **skip App Groups entirely**.
 
-### 1. Get your Team ID
+> **What capabilities do I add in Xcode?** None. Walkie uses mic / camera / local network / Keychain / Bonjour — all of those work with just Info.plist keys we've already set. The **Signing & Capabilities** tab should show only the one default "Signing" block.
 
-Open <https://developer.apple.com/account>, go to **Membership details**, copy the 10-character **Team ID**.
+> **Do I need to create a Distribution certificate manually?** No. With automatic signing, Xcode creates and manages certificates and provisioning profiles for you the first time you archive.
 
-### 2. Register the App ID
+---
 
-<https://developer.apple.com/account/resources/identifiers/list> → **+** → **App IDs** → **App**:
+## Part 1 — Apple Developer Portal (one-time, 5 min)
 
-- Description: `Walkie`
-- Bundle ID: **Explicit**, `com.klick.walkietalkie` (or whatever you change `PRODUCT_BUNDLE_IDENTIFIER` to in `project.yml`).
-- Capabilities: none required for Phase 1. Do **not** enable Push Notifications, Background Modes, etc.
+**URL:** <https://developer.apple.com/account>
 
-### 3. Create the App Store Connect record
+### 1.1 Copy your Team ID
 
-<https://appstoreconnect.apple.com/apps> → **+** → **New App**:
+- Click **Membership details** in the sidebar.
+- Find the **Team ID** row — it's a 10-character alphanumeric string like `A1B2C3D4E5`.
+- Copy it. You'll paste it into `Signing.xcconfig` in a minute.
 
-- Platform: iOS
-- Name: `Walkie` (or anything — shown in TestFlight)
-- Primary Language: English (or your preference)
-- Bundle ID: the one you just registered
-- SKU: `walkie-001` (internal identifier, anything unique)
-- User Access: Full Access
+### 1.2 Create the App ID (Bundle ID)
 
-## Local setup
+- Sidebar → **Certificates, Identifiers & Profiles**.
+- Click **Identifiers** on the left.
+- Click the blue **+** next to "Identifiers".
+- Select **App IDs** → **Continue**.
+- Select type: **App** → **Continue**.
+- Fill in:
+  - **Description:** `Walkie`
+  - **Bundle ID:** Select **Explicit**, enter `com.klick.walkietalkie`
+    - Or pick your own reverse-DNS (e.g. `com.yourname.walkietalkie`). If you change it here, also change `PRODUCT_BUNDLE_IDENTIFIER` in `project.yml`.
+- **Capabilities section:** **leave everything unchecked.** Walkie needs none of these.
+- **App Services section:** **leave everything unchecked.**
+- Click **Continue** → **Register**.
 
-### 1. Add your Team ID to the gitignored config
+That's it. No App Group, no entitlement, no push cert.
+
+---
+
+## Part 2 — App Store Connect (one-time, 3 min)
+
+**URL:** <https://appstoreconnect.apple.com/apps>
+
+- Click the blue **+** button → **New App**.
+- Fill in:
+  - **Platforms:** ☑ iOS
+  - **Name:** `Walkie` (shown to testers in TestFlight)
+  - **Primary Language:** English (U.S.)
+  - **Bundle ID:** select `com.klick.walkietalkie - Walkie` from the dropdown (the one you just registered)
+  - **SKU:** `walkie-001` (any unique internal string)
+  - **User Access:** Full Access
+- Click **Create**.
+
+The app record exists now. You'll come back to it after uploading a build.
+
+---
+
+## Part 3 — Local setup (one-time, 1 min)
 
 ```bash
+cd /Users/mraj/Documents/GitHub/Klick
+
+# 1. Copy the example and open in your editor
 cp Signing.xcconfig.example Signing.xcconfig
-# Open Signing.xcconfig and replace XXXXXXXXXX with your 10-char Team ID
+open -e Signing.xcconfig
 ```
 
-`Signing.xcconfig` is in `.gitignore` so your team ID never ships in the public repo.
-
-### 2. Regenerate the Xcode project
+Replace `XXXXXXXXXX` with your 10-char Team ID from Part 1.1. Save and close.
 
 ```bash
+# 2. Regenerate the Xcode project so it picks up the xcconfig
 xcodegen generate
+
+# 3. Open in Xcode
 open WalkieTalkie.xcodeproj
 ```
 
-Xcode should now resolve automatic signing against your team.
+`Signing.xcconfig` is in `.gitignore` — your Team ID stays local and never hits GitHub.
 
-### 3. (Optional) Replace the placeholder app icon
+---
 
-`Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png` is a placeholder I generated from a Swift script. Drop a real 1024×1024 PNG (no transparency, no rounded corners — iOS adds them) in that path to replace it. Keep the filename or update `Contents.json` accordingly.
+## Part 4 — In Xcode (verify signing, 1 min)
 
-## Build & upload
+### 4.1 Sign in with your Apple ID (first time only)
 
-### CLI path (reproducible)
+- Xcode menu → **Settings…** (`⌘,`) → **Accounts** tab.
+- If your Apple ID isn't listed, click **+** → **Apple ID** → enter credentials.
+- In the right pane, your team should appear in the list. Close Settings.
 
-```bash
-# 1. Archive (signed)
-xcodebuild -project WalkieTalkie.xcodeproj \
-  -scheme WalkieTalkie \
-  -configuration Release \
-  -destination 'generic/platform=iOS' \
-  -archivePath build/WalkieTalkie.xcarchive \
-  archive
+### 4.2 Check Signing & Capabilities tab
 
-# 2. Export for App Store
-xcodebuild -exportArchive \
-  -archivePath build/WalkieTalkie.xcarchive \
-  -exportPath build/export \
-  -exportOptionsPlist ExportOptions.plist
+- In the Project Navigator (left sidebar), click the blue **WalkieTalkie** project icon at the top.
+- In the middle pane, select the **WalkieTalkie** target (not the tests target, not the project).
+- Click the **Signing & Capabilities** tab at the top.
 
-# 3. Upload
-xcrun altool --upload-app \
-  --file build/export/WalkieTalkie.ipa \
-  --type ios \
-  --apiKey YOUR_KEY_ID --apiIssuer YOUR_ISSUER_ID
+You should see exactly this:
+
+```
+┌─ Signing ────────────────────────────────────────────────┐
+│ ☑ Automatically manage signing                           │
+│                                                           │
+│ Team:               [ Your Team Name ]          [ ▼ ]     │
+│ Bundle Identifier:  com.klick.walkietalkie                │
+│ Provisioning Profile: Xcode Managed Profile               │
+│ Signing Certificate:  Apple Development: ...              │
+└───────────────────────────────────────────────────────────┘
 ```
 
-You'll need an App Store Connect API key (<https://appstoreconnect.apple.com/access/integrations/api>) for altool. Alternatively skip altool and use the Xcode Organizer GUI (below).
+- **If Team is empty or says "None":** click the dropdown and pick your team. (This shouldn't happen if Signing.xcconfig is set correctly, but sometimes the UI lags.)
+- **If you see a red warning "Failed to register bundle identifier":** you didn't create the App ID in Part 1.2. Go back and do that.
 
-### GUI path (easier first time)
+**Do not click "+ Capability".** You don't need any. The list should be empty except the default Signing block.
 
-1. In Xcode: **Product → Archive**. (Must be on a real device target, not a simulator.)
-2. When the Organizer opens, select the new archive → **Distribute App** → **App Store Connect** → **Upload**.
-3. Keep all the defaults: automatic signing, include symbols, manage version and build number.
-4. Upload takes a few minutes. You'll get an email when processing finishes.
+### 4.3 Try a quick build
 
-### Export options template
+- Top-left of Xcode, select any connected iPhone or "Any iOS Device (arm64)" as the destination.
+- Press `⌘B` to build. Should succeed. If it fails on signing, re-check Part 4.2.
 
-Create `ExportOptions.plist` in the repo root if you use the CLI path. **Do not commit it** — it contains your team ID:
+---
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>app-store-connect</string>
-    <key>teamID</key>
-    <string>XXXXXXXXXX</string>
-    <key>uploadSymbols</key>
-    <true/>
-    <key>signingStyle</key>
-    <string>automatic</string>
-</dict>
-</plist>
+## Part 5 — Archive and upload (5 min)
+
+### 5.1 Select the archive destination
+
+- Top of Xcode, click the device/simulator picker (next to the scheme name).
+- Choose **Any iOS Device (arm64)**.
+  - *Not* a simulator — you can't archive to simulator.
+  - *Not* a specific iPhone unless you only want to sign for that device.
+
+### 5.2 Archive
+
+- Menu: **Product → Archive**.
+- Wait 2–5 minutes. You'll see "Archiving WalkieTalkie…" in the activity bar.
+- When it finishes, the **Organizer** window opens automatically, showing your new archive.
+
+### 5.3 Distribute
+
+In the Organizer:
+
+- Your new archive is selected at the top. Click **Distribute App** (right side).
+- Select **App Store Connect** → **Next**.
+- Select **Upload** → **Next**.
+  - *Not* Export — that creates an .ipa file but doesn't upload.
+- **App Store Connect distribution options screen:**
+  - ☑ Strip Swift symbols
+  - ☑ Upload your app's symbols
+  - ☑ Manage Version and Build Number
+  - Click **Next**.
+- **Re-sign confirmation screen:**
+  - Select **Automatically manage signing** → **Next**.
+- **Review screen:** shows everything bundled. Should list:
+  - Team, bundle ID, version, size
+  - Entitlements: none special
+  - Capabilities: none
+  - Click **Upload**.
+- Wait 1–3 minutes for upload. You'll see a progress bar.
+- On success: "App uploaded successfully" → **Done**.
+
+---
+
+## Part 6 — In App Store Connect (5 min)
+
+**URL:** <https://appstoreconnect.apple.com/apps>
+
+- Click your **Walkie** app.
+- Top tab: **TestFlight**.
+
+### 6.1 Wait for processing
+
+- Your build appears under **iOS Builds** with status **Processing**.
+- Takes 5–15 min the first time, 2–5 min subsequently.
+- You'll get an email when it's done. Status becomes **Ready to Submit** or shows a yellow warning.
+
+### 6.2 Export compliance (if prompted)
+
+If ASC asks an Export Compliance question on this build (it often doesn't now that `ITSAppUsesNonExemptEncryption=false` is set in Info.plist, but sometimes does for the first upload):
+
+- "Does your app use encryption?" → **Yes**
+- "Does it qualify for an exemption?" → **Yes**
+- Select: **Your app uses or accesses encryption that falls within the exemption categories.**
+- "Which exemption?" → **The encryption is used only to protect sensitive user data** (or similar wording).
+- **Start Internal Testing**.
+
+### 6.3 Add internal testers
+
+Internal testers don't require App Review — instant install. Up to 100.
+
+- Left sidebar → **Internal Testing** → **+ Testers**.
+- Pick yourself + anyone with an Apple ID on your team.
+- Click **Add**.
+- Each gets an email with a TestFlight install link. They click it, install TestFlight app from the App Store if they don't have it, then install Walkie.
+
+### 6.4 (Optional) External testers
+
+If you want to send to non-team people, that requires an initial Beta App Review (usually < 24 h):
+
+- Left sidebar → **External Testing** → create a group → add testers by email.
+- Fill in:
+  - **Beta App Description:** "Encrypted push-to-talk over local WiFi. Hold the big button to talk."
+  - **What to Test:** use the tester brief below.
+  - **Feedback Email:** your email.
+- Submit for Review.
+
+### Tester brief (paste into "What to Test")
+
+```
+Requires two iPhones on the same WiFi network.
+
+1. Install on both phones. Grant mic, local network, and camera
+   permissions when prompted.
+2. Tap START on both phones.
+3. On phone A: PAIR → SHOW CODE.
+4. On phone B: PAIR → SCAN CODE. Scan A's screen.
+5. Verify the FPRINT value on both phones' PAIR tile matches
+   after scanning — that confirms encryption keys are shared.
+6. Close both pairing sheets. Each phone's name should appear
+   in the other's peer list.
+7. Tap a peer to select it. Hold TRANSMIT and talk.
+8. Watch TELEMETRY: PKT TX and PKT RX should climb in sync
+   while talking; LOSS should stay under 1%.
+
+Known limits: one-to-one only (no group talk). Foreground only
+(no background audio). LAN only (no internet relay).
 ```
 
-## Once in App Store Connect
+---
 
-1. Open the app → **TestFlight** tab.
-2. Wait for processing (5–15 min for a small app). Status flips from *Processing* to *Ready to Submit*.
-3. Complete the **Export Compliance** questionnaire (first upload only):
-   - "Does your app use encryption?" → **Yes**
-   - "Does your app qualify for any of the exemptions?" → **Yes**, the primary exemption (using encryption only to protect user data with standard algorithms). The `ITSAppUsesNonExemptEncryption: false` key in Info.plist pre-answers this — ASC may skip the questionnaire on subsequent builds.
-4. Add internal testers under **Internal Testing** (up to 100, no review). Each tester gets an email with the TestFlight install link.
-5. External testing requires a short App Review (1–2 days for the first build, usually faster after). Fill in:
-   - Beta App Description
-   - Feedback Email
-   - Marketing URL (optional)
-   - What to Test: "Push-to-talk audio over local WiFi. Grant mic, local network, and camera permissions on first launch. Pair by scanning one device's QR from the other."
+## Part 7 — Releasing a new build
 
-## Bump the build number between uploads
+App Store Connect rejects re-uploads with the same (version, build) pair. Bump the build number every time.
 
-App Store Connect rejects re-uploads with the same `(version, build)` pair. For each new TestFlight upload, bump `CURRENT_PROJECT_VERSION` in `project.yml` (or `MARKETING_VERSION` for a new version line):
+Edit `project.yml`:
 
 ```yaml
 settings:
   base:
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "2"   # was 1
+    MARKETING_VERSION: "0.1.0"        # same version line
+    CURRENT_PROJECT_VERSION: "2"      # was 1, increment every upload
 ```
 
-Then `xcodegen generate` and re-archive.
+For a new version line (e.g. 0.2.0), bump `MARKETING_VERSION` and reset `CURRENT_PROJECT_VERSION` to 1.
 
-## Known caveats for testers
+Then:
 
-Paste this into the TestFlight **What to Test** section:
+```bash
+xcodegen generate
+```
 
-> 1. Install on **two** iPhones on the **same WiFi network**.
-> 2. Launch. Grant mic, local network, and camera permissions.
-> 3. Tap **START** on both.
-> 4. On phone A: **PAIR → SHOW CODE**. On phone B: **PAIR → SCAN CODE**. Scan A's screen. Verify the `FPRINT` value on the **PAIR** tile matches on both phones.
-> 5. Close both pairing sheets. Each phone's name should appear in the other's peer list.
-> 6. Tap a peer to select it. Hold **TRANSMIT** and talk. You should hear audio on the other device.
-> 7. Test the **TELEMETRY** panel — `PKT TX` and `PKT RX` should climb in sync; `LOSS` should stay under 1 %.
-> 8. Test key rotation: **Settings → Unpair**, then re-pair.
-> 9. Walk away — when out of WiFi range the peer should drop from the list.
+And repeat Part 5.
 
-## Troubleshooting
+---
 
-- **"No matching provisioning profile found"** → You haven't set `DEVELOPMENT_TEAM` in `Signing.xcconfig`, or Xcode isn't signed in to an account with access to that team.
-- **"Bundle ID not available"** → That bundle ID is already registered to another developer. Change `PRODUCT_BUNDLE_IDENTIFIER` in `project.yml` to your own reverse-DNS.
-- **Archive succeeds but "invalid icon" on upload** → You replaced `AppIcon-1024.png` with a PNG that has transparency or is not exactly 1024×1024. Re-export.
-- **"No Bonjour services found" in TestFlight review** → App reviewers run on a locked-down network. Local-network apps sometimes need a review note. Add "Requires two devices on the same WiFi for end-to-end functionality. Reviewer can verify UI, permission prompts, and pairing QR flow on a single device."
-- **"Encryption export compliance missing"** → Re-check `ITSAppUsesNonExemptEncryption` in Info.plist is `false` and redo the archive.
+## Common failures
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Red "Failed to register bundle identifier" in Signing tab | Didn't do Part 1.2 | Register the App ID in the Developer Portal |
+| "No profiles for 'com.klick.walkietalkie' were found" | Your Apple ID isn't on the team that owns the App ID | Get invited to the team, or change bundle ID to one you own |
+| "Could not find team with id 'XXXX'" | Wrong Team ID in Signing.xcconfig | Re-check Membership details |
+| Archive succeeds but upload says "invalid icon" | Asset catalog broken | Verify `Resources/Assets.xcassets/AppIcon.appiconset/` has Contents.json + 3 PNGs |
+| TestFlight says "Missing Compliance" | Edge case where ITSAppUsesNonExemptEncryption didn't stick | Answer the compliance question in the ASC web UI (Part 6.2) |
+| ASC review rejects with "peers not found" | Reviewer runs on a locked-down network | Add reviewer note: "Requires two devices on same WiFi for full functionality; reviewer can verify UI, permission prompts, and the pairing QR generation on a single device." |
+| Testers don't see the build | Processing not done yet, or you haven't added them to a testing group | Wait and re-check under TestFlight → Internal or External Testing |
+
+---
+
+## Summary — what lives where
+
+| What | Where | Gitignored? |
+|---|---|---|
+| Team ID | `Signing.xcconfig` | ✅ yes |
+| Bundle identifier | `project.yml` | no (public-safe) |
+| Version / build number | `project.yml` (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`) | no |
+| App icons | `Resources/Assets.xcassets/AppIcon.appiconset/` | no |
+| Privacy manifest | `Resources/PrivacyInfo.xcprivacy` | no |
+| Export compliance answer | `Resources/Info.plist` (`ITSAppUsesNonExemptEncryption: false`) | no |
+| Provisioning profiles / certificates | Managed by Xcode automatically | n/a |
