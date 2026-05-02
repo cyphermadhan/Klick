@@ -31,11 +31,15 @@ targets:
     platform: iOS
     sources:
       - path: Sources
-    resources:
-      - path: Resources
-        excludes:
-          - Info.plist
-          - WalkieTalkie.entitlements
+      # Resources live alongside source files in XcodeGen — there is no
+      # separate `resources:` key. The target's Copy Bundle Resources
+      # phase picks up any non-code files XcodeGen adds, classified by
+      # extension. The mp3 assets are listed explicitly so they can't be
+      # missed by a directory scan.
+      - path: Resources/walkie-press.mp3
+        buildPhase: resources
+      - path: Resources/walkie-release.mp3
+        buildPhase: resources
     info:
       path: Resources/Info.plist
       properties:

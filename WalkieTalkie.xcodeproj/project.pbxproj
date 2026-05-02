@@ -24,6 +24,7 @@
 		4FAB2B3D6445965AE35FFC1A /* PeerListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB4F243FD8E6EEDC7E19A9FF /* PeerListView.swift */; };
 		6B554B99884687D351BB506A /* AudioPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512CECC98167E28A3C5AF3E2 /* AudioPlayback.swift */; };
 		72DD654D14BC6C344BB171E8 /* KeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CF009A346558102CD7C2F62 /* KeyStore.swift */; };
+		8080A7B53EF848F1ED08EBD8 /* walkie-press.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 81B86C08772017BE1F6944D5 /* walkie-press.mp3 */; };
 		83E91A63C870247403FAA572 /* PTTSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = C748FBB092A2DBC51BBBD3A6 /* PTTSession.swift */; };
 		8E1482CF5F4483DD6CA8E57F /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4045B919AD46557F838BDBBB /* QRScannerView.swift */; };
 		93B13E1AEADBEF47408EBC56 /* BonjourService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB706EA5A5ECBAA766075A40 /* BonjourService.swift */; };
@@ -33,6 +34,7 @@
 		9E71EB74D14E81517354128D /* AudioFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = F07A18E285A46AFD4B89DA13 /* AudioFormats.swift */; };
 		A4F3899B4353671104778B67 /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593ECCC1D50AFE1E44412A75 /* PairingView.swift */; };
 		A8DE6F0CD094CBB155CF3E1A /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 664E28E3CC3376687990CF23 /* AudioSessionManager.swift */; };
+		AD3D6F6319E3D0CC2B086F0B /* walkie-release.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 40990CF867D827C1A00BC32D /* walkie-release.mp3 */; };
 		AF82CDC7B6DAFA124CA9313C /* WalkieTalkieApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40BE4024F36D283C65D961FD /* WalkieTalkieApp.swift */; };
 		B6B205646942B8D15EE856EC /* PairingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE9CDCBD54800B6E311D43E4 /* PairingService.swift */; };
 		BE332EEDDCB1597F85E23FC1 /* FloatRingBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0042BDAE89A07CEDBB04A13F /* FloatRingBuffer.swift */; };
@@ -63,6 +65,7 @@
 		36D4DF722DF45FA209A83E52 /* PacketProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketProtocolTests.swift; sourceTree = "<group>"; };
 		37046A5A16377D7D574A1AAC /* AudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCapture.swift; sourceTree = "<group>"; };
 		4045B919AD46557F838BDBBB /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		40990CF867D827C1A00BC32D /* walkie-release.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "walkie-release.mp3"; sourceTree = "<group>"; };
 		40BE4024F36D283C65D961FD /* WalkieTalkieApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkieTalkieApp.swift; sourceTree = "<group>"; };
 		4960CCF7DEF58C2EE2D48711 /* AudioPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPipeline.swift; sourceTree = "<group>"; };
 		512CECC98167E28A3C5AF3E2 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
@@ -73,6 +76,7 @@
 		5CF009A346558102CD7C2F62 /* KeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyStore.swift; sourceTree = "<group>"; };
 		664E28E3CC3376687990CF23 /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
 		7A0583F38620AC167707A313 /* PeerInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerInfo.swift; sourceTree = "<group>"; };
+		81B86C08772017BE1F6944D5 /* walkie-press.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "walkie-press.mp3"; sourceTree = "<group>"; };
 		B3487E4571D3BA54FB2F1392 /* OpusCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCodecTests.swift; sourceTree = "<group>"; };
 		BEB5DB57551EC93FCD9CEE48 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		BF0DE777DA37C2930A5E95D8 /* WalkieTalkie.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WalkieTalkie.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -147,6 +151,7 @@
 		31F6689F1ED9689E02BE82AF = {
 			isa = PBXGroup;
 			children = (
+				C8F64E7270644330BA68A469 /* Resources */,
 				9FFDF95C8A14EAC3D339258D /* Sources */,
 				CCB3D70A099B1110A0B3DDC5 /* Tests */,
 				11446427E3B338A855356FAD /* Products */,
@@ -208,6 +213,15 @@
 			path = Crypto;
 			sourceTree = "<group>";
 		};
+		C8F64E7270644330BA68A469 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				81B86C08772017BE1F6944D5 /* walkie-press.mp3 */,
+				40990CF867D827C1A00BC32D /* walkie-release.mp3 */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		CCB3D70A099B1110A0B3DDC5 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
@@ -258,6 +272,7 @@
 			buildConfigurationList = FEB3D40BA813ED70B91D72B6 /* Build configuration list for PBXNativeTarget "WalkieTalkie" */;
 			buildPhases = (
 				FACA2C56D75B30E739AFF4CE /* Sources */,
+				78EC04CD54C49D056FD656D1 /* Resources */,
 				61FADD0618313D2FE0CACD70 /* Frameworks */,
 			);
 			buildRules = (
@@ -313,6 +328,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		78EC04CD54C49D056FD656D1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8080A7B53EF848F1ED08EBD8 /* walkie-press.mp3 in Resources */,
+				AD3D6F6319E3D0CC2B086F0B /* walkie-release.mp3 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		DA28DE46A112297C735FE47F /* Sources */ = {
