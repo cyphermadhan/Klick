@@ -1,0 +1,97 @@
+name: WalkieTalkie
+options:
+  bundleIdPrefix: com.klick
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_PREVIEWS: "YES"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "Apple Development"
+
+packages:
+  Sodium:
+    url: https://github.com/jedisct1/swift-sodium
+    from: 0.9.1
+
+targets:
+  WalkieTalkie:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    resources:
+      - path: Resources
+        excludes:
+          - Info.plist
+          - WalkieTalkie.entitlements
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Walkie
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: ""
+        NSMicrophoneUsageDescription: Used for push-to-talk voice communication.
+        NSLocalNetworkUsageDescription: Used to discover and communicate with nearby devices.
+        NSCameraUsageDescription: Used to scan pairing QR codes.
+        NSBonjourServices:
+          - _walkie._udp.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: true
+        UIViewControllerBasedStatusBarAppearance: true
+        UIRequiredDeviceCapabilities:
+          - arm64
+    dependencies:
+      - package: Sodium
+        product: Sodium
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.klick.walkietalkie
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        GENERATE_INFOPLIST_FILE: "NO"
+
+  WalkieTalkieTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/WalkieTalkieTests
+    dependencies:
+      - target: WalkieTalkie
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.klick.walkietalkie.tests
+        GENERATE_INFOPLIST_FILE: "YES"
+
+schemes:
+  WalkieTalkie:
+    build:
+      targets:
+        WalkieTalkie: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - WalkieTalkieTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

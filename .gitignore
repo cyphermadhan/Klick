@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Xcode user data
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Build outputs (from xcodebuild -derivedDataPath build)
+build/
+DerivedData/
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+
+# CocoaPods / Carthage — not used, but future-proof
+Pods/
+Carthage/Build/
+
+# Secrets / local overrides
+*.pem
+*.p12
+.env
+.env.local
