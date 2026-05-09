@@ -60,13 +60,38 @@ struct SettingsView: View {
 
                         TerminalFrame("REGION") {
                             VStack(alignment: .leading, spacing: 10) {
-                                Picker("Region", selection: $region) {
+                                // Custom Menu in place of .pickerStyle(.menu)
+                                // so the label respects our mono font —
+                                // SwiftUI's built-in picker button uses
+                                // the system font and ignores `.font` in
+                                // most iOS versions.
+                                Menu {
                                     ForEach(Region.allCases, id: \.self) { r in
-                                        Text(r.displayName).tag(r)
+                                        Button {
+                                            region = r
+                                        } label: {
+                                            Text(r.displayName)
+                                            if r == region {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
                                     }
+                                } label: {
+                                    HStack {
+                                        Text(region.displayName)
+                                            .font(DT.mono(13, weight: .semibold))
+                                            .foregroundStyle(DT.text)
+                                        Spacer()
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(DT.info)
+                                    }
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 10)
+                                    .background(DT.panel)
+                                    .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
                                 }
-                                .pickerStyle(.menu)
-                                .tint(DT.info)
+                                .buttonStyle(.plain)
 
                                 if !RegionStore.isUserOverridden {
                                     // Tell the user we defaulted this from
@@ -180,7 +205,7 @@ struct SettingsView: View {
 
     private var header: some View {
         HStack {
-            Text("SYS · WALKIE SETTINGS")
+            Text("KLICK · SYS SETTINGS")
                 .walkieLabel(11, weight: .bold)
                 .foregroundStyle(DT.text)
             Spacer()

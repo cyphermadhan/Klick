@@ -39,6 +39,18 @@ enum DT {
     /// System-magenta (MPC "SYSTEM" pill).
     static let sys = Color(red: 0.92, green: 0.45, blue: 0.78)
 
+    // Nav-pill accents — each top-row tab gets its own hue so the
+    // primary action colors (green/red/blue/amber above) stay reserved
+    // for semantic states (go, transmit, info, warn).
+    /// Yellow amber for TALK.
+    static let navTalk    = Color(red: 0.95, green: 0.76, blue: 0.20)
+    /// Hot pink for CHAT.
+    static let navChat    = Color(red: 0.95, green: 0.40, blue: 0.68)
+    /// Purple for LISTEN.
+    static let navListen  = Color(red: 0.70, green: 0.45, blue: 0.95)
+    /// Muted cool-grey for SETTINGS — stays neutral alongside the others.
+    static let navSettings = Color(red: 0.62, green: 0.65, blue: 0.72)
+
     // MARK: - Fonts
 
     static let headerTracking: CGFloat = 2.0

@@ -82,18 +82,26 @@ struct ContentView: View {
 
     private var brandStrip: some View {
         HStack(spacing: 8) {
-            Text("WALKIE")
+            Text("KLICK")
                 .walkieLabel(14, weight: .heavy, tracking: 3)
                 .foregroundStyle(DT.text)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             Rectangle().fill(DT.border).frame(width: 1, height: 12)
+            // "CH 01" — walkie-talkie channel indicator, aesthetic only.
+            // Klick uses key-based pairing (one shared libsodium key per
+            // install), not frequency channels like traditional radios,
+            // so there's only ever one "channel" per pair. Kept for the
+            // terminal look.
             Text("CH 01")
                 .walkieLabel(11)
                 .foregroundStyle(DT.textDim)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             Rectangle().fill(DT.border).frame(width: 1, height: 12)
+            // Codec + cipher badges — part of the terminal aesthetic.
+            // "OPUS 48K" = Opus audio codec @ 48 kHz; "XS20·P1305" =
+            // libsodium XSalsa20 + Poly1305 (encryption/auth).
             Text("OPUS 48K")
                 .walkieLabel(11)
                 .foregroundStyle(DT.textDim)
@@ -112,31 +120,30 @@ struct ContentView: View {
     // MARK: - Nav pills (TALK / CHAT / LISTEN / SETTINGS)
 
     private var navPills: some View {
-        // ScrollView is the safety net: on iPhone SE 8-char "SETTINGS"
-        // plus three other icon+text pills is tight. Each pill sizes to
-        // its own content rather than sharing equal width, so labels
-        // never wrap onto a second line.
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                navPill(title: "TALK", icon: "dot.radiowaves.left.and.right",
-                        accent: DT.ok, active: true, action: {})
-                navPill(title: "CHAT", icon: "bubble.left.fill",
-                        accent: DT.sys, active: false) { showingChat = true }
-                navPill(title: "LISTEN", icon: "ear.fill",
-                        accent: DT.info, active: false) { showingListen = true }
-                navPill(title: "SETTINGS", icon: "slider.horizontal.3",
-                        accent: DT.textDim, active: false) { showingSettings = true }
-            }
+        // Equal-width distribution so the four pills fill the row edge
+        // to edge. `minimumScaleFactor` rescues SETTINGS on narrower
+        // devices where "SETTINGS" plus icon would otherwise wrap.
+        HStack(spacing: 6) {
+            navPill(title: "TALK", icon: "dot.radiowaves.left.and.right",
+                    accent: DT.navTalk, active: true, action: {})
+            navPill(title: "CHAT", icon: "bubble.left.fill",
+                    accent: DT.navChat, active: false) { showingChat = true }
+            navPill(title: "LISTEN", icon: "ear.fill",
+                    accent: DT.navListen, active: false) { showingListen = true }
+            navPill(title: "SETTINGS", icon: "slider.horizontal.3",
+                    accent: DT.navSettings, active: false) { showingSettings = true }
         }
-        .frame(height: 34)
     }
 
     /// Uniform icon+text pill. Active state uses a subtle tinted
-    /// background + solid border instead of inverted colors — that
-    /// swap lost contrast against the green TALK accent (black on
-    /// bright green rendered text effectively invisible on some
-    /// displays). Now active = 20% fill + full-opacity border + text
-    /// in accent color, same readability as inactive.
+    /// background + heavier border instead of inverted colors — that
+    /// swap lost contrast against bright accents and rendered text
+    /// effectively invisible on some displays.
+    ///
+    /// Each nav pill has its own hue (TALK yellow / CHAT pink /
+    /// LISTEN purple / SETTINGS grey) so they read as distinct tabs
+    /// rather than overloading the app's semantic action colors
+    /// (green / red / blue / amber).
     private func navPill(title: String, icon: String, accent: Color,
                          active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -146,10 +153,11 @@ struct ContentView: View {
                 Text(title)
                     .walkieLabel(10)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(accent)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 6)
+            .frame(maxWidth: .infinity)
             .frame(height: 32)
             .background(active ? accent.opacity(0.20) : Color.clear)
             .overlay(Rectangle().strokeBorder(accent.opacity(active ? 1 : 0.6),

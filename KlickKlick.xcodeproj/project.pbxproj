@@ -38,6 +38,7 @@
 		5A43FDA41E8A91791E42C944 /* ListenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB96C31AC746959E99FB63C /* ListenView.swift */; };
 		6FC2D74576B4AAE09BFFB9FC /* KeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2179D4EEFD3CABE3E8BF881F /* KeyStore.swift */; };
 		71C97E76A8363CDC1B01C27B /* OpusCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35D3735E6C68F3F128F9FE38 /* OpusCodecTests.swift */; };
+		72AF8908C94496C28C84B023 /* MorseSpeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2DADAC598ABDF0F2690CEA2 /* MorseSpeed.swift */; };
 		77C7F8457A8F8CB9EFF90B59 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4389638E207A96A04375F3FE /* SettingsView.swift */; };
 		79C421978620CE8DCB498AFA /* AudioTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C09D69348A2B82BBDDA8D490 /* AudioTransport.swift */; };
 		7A0DD34604C7D24F83484DB0 /* FlashlightDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 414A0DB7BBD85364EED219EF /* FlashlightDecoder.swift */; };
@@ -63,6 +64,7 @@
 		D095983160A3865F96B3C8FA /* PairingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35A4C58F38597FB9153BF2B /* PairingServiceTests.swift */; };
 		D0A315DB24FEE46F1848507C /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 336EE65987471D7E849B2163 /* QRScannerView.swift */; };
 		D53B77F4FBB483E75E92FBAC /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA248C85D299C3CFEAC3B36E /* AudioSessionManager.swift */; };
+		D87B1761959AFA4E168B7357 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC3A93C45213E2A69E2580A /* CameraPreviewView.swift */; };
 		DA1C4553689A26D6A727FD5C /* CryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DA852F03C1CF67F44A54350 /* CryptoService.swift */; };
 		E5BCEA832EAFCA2EB4892109 /* PeerListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78CE62140BCFC1094E48E491 /* PeerListView.swift */; };
 		E704EADF097B6284D8E8B9F0 /* LoRaBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6D06E100E5A3E197886343 /* LoRaBridge.swift */; };
@@ -140,6 +142,7 @@
 		B80551F1D625E205A491387C /* MorseTone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseTone.swift; sourceTree = "<group>"; };
 		BA9F1AD178FAFF3797280210 /* MeshtasticCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshtasticCodec.swift; sourceTree = "<group>"; };
 		BBB368A79D34D2393B14E772 /* RegionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionTests.swift; sourceTree = "<group>"; };
+		BCC3A93C45213E2A69E2580A /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		C09D69348A2B82BBDDA8D490 /* AudioTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTransport.swift; sourceTree = "<group>"; };
 		C13C198A50388D0159C48929 /* PeerInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerInfo.swift; sourceTree = "<group>"; };
 		C416D67ED47534CEBAFD17E3 /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingService.swift; sourceTree = "<group>"; };
@@ -149,6 +152,7 @@
 		D0224FB1C92119C80145E026 /* MeshtasticProtoCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshtasticProtoCodecTests.swift; sourceTree = "<group>"; };
 		D0A07CADF19743DA1595120B /* AudioFormats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFormats.swift; sourceTree = "<group>"; };
 		D15919E6EEF8F1C7A0435399 /* AudioToneDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioToneDecoder.swift; sourceTree = "<group>"; };
+		D2DADAC598ABDF0F2690CEA2 /* MorseSpeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseSpeed.swift; sourceTree = "<group>"; };
 		D6D48DECAF295F167C8F9F8A /* KlickKlickTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KlickKlickTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D6E0EF52CCFFA9B3C9F3CE32 /* MorseDemodulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseDemodulator.swift; sourceTree = "<group>"; };
 		E6F2ECF21A2BFC863EBC5A9E /* AudioUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioUtils.swift; sourceTree = "<group>"; };
@@ -157,7 +161,7 @@
 		F3A14F51FA22484C0D90198D /* walkie-release.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "walkie-release.mp3"; sourceTree = "<group>"; };
 		F4CD2AC8A254FE0BE69421F6 /* ProtobufWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtobufWire.swift; sourceTree = "<group>"; };
 		FEC80F6C6E752051169D6A33 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
-		"TEMP_09663B09-66D4-4111-9933-239781225BE4" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		"TEMP_0309C6A6-B945-4A32-AAEB-1A3691FF9AEF" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -330,6 +334,7 @@
 				414A0DB7BBD85364EED219EF /* FlashlightDecoder.swift */,
 				B465C642A38ECE07060094FD /* MorseCode.swift */,
 				D6E0EF52CCFFA9B3C9F3CE32 /* MorseDemodulator.swift */,
+				D2DADAC598ABDF0F2690CEA2 /* MorseSpeed.swift */,
 				B80551F1D625E205A491387C /* MorseTone.swift */,
 			);
 			path = Morse;
@@ -346,6 +351,7 @@
 		FDB199DAF76B375C59B5CE24 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				BCC3A93C45213E2A69E2580A /* CameraPreviewView.swift */,
 				14E92AB2E52589E1EF00AA6E /* ChatView.swift */,
 				7BD0801652E8C0A25C0E155F /* ContentView.swift */,
 				AAA768B05DEB44570EC9E8EE /* DesignTokens.swift */,
@@ -359,10 +365,10 @@
 			path = UI;
 			sourceTree = "<group>";
 		};
-		"TEMP_1A11D97E-EDBD-4927-92F7-2F32828D6AAC" /* Klick */ = {
+		"TEMP_780F524F-402C-4E67-BA95-69BBF1F90933" /* Klick */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_09663B09-66D4-4111-9933-239781225BE4" /* Signing.xcconfig */,
+				"TEMP_0309C6A6-B945-4A32-AAEB-1A3691FF9AEF" /* Signing.xcconfig */,
 			);
 			path = Klick;
 			sourceTree = "<group>";
@@ -476,6 +482,7 @@
 				A05A2E936C5FFE6F4F4B7CE4 /* AudioToneDecoder.swift in Sources */,
 				79C421978620CE8DCB498AFA /* AudioTransport.swift in Sources */,
 				A9E49000C9AC0CAB44D7DE41 /* AudioUtils.swift in Sources */,
+				D87B1761959AFA4E168B7357 /* CameraPreviewView.swift in Sources */,
 				387E4C65C21091925011DA80 /* ChatView.swift in Sources */,
 				B41A66EC62904DF4EFF681D9 /* ContentView.swift in Sources */,
 				FD8021736AEF4FCBFDE57286 /* CoreBluetoothMeshtasticLink.swift in Sources */,
@@ -497,6 +504,7 @@
 				9B6A9F0597734F430DBD42E2 /* MessageDeliveryTracker.swift in Sources */,
 				0B7459A814036E9DF6AC5F23 /* MorseCode.swift in Sources */,
 				014CCD60E6BFC73D4D125180 /* MorseDemodulator.swift in Sources */,
+				72AF8908C94496C28C84B023 /* MorseSpeed.swift in Sources */,
 				9E527965EA6C4B0D14856EEF /* MorseTone.swift in Sources */,
 				F40DF069CE1D0C1C7F1BBE51 /* OpusCodec.swift in Sources */,
 				257BDD89914163033540776A /* PTTButton.swift in Sources */,
@@ -623,7 +631,7 @@
 		};
 		6B01971E46A898944C3B7FEC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_09663B09-66D4-4111-9933-239781225BE4" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_0309C6A6-B945-4A32-AAEB-1A3691FF9AEF" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -660,7 +668,7 @@
 		};
 		AE0F2DE2B6837F30287A01D1 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_09663B09-66D4-4111-9933-239781225BE4" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_0309C6A6-B945-4A32-AAEB-1A3691FF9AEF" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";

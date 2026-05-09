@@ -21,7 +21,22 @@ struct ChatView: View {
     @StateObject private var tone = MorseTone()
     @StateObject private var beacon = FlashlightBeacon()
 
-    @AppStorage("morse.wpm") private var wpm: Int = 12
+    /// User-facing speed as a raw Int (the enum's WPM). Surfaces to the
+    /// UI as a Slow / Medium / Fast dropdown; the rest of the Morse
+    /// stack still receives a plain WPM integer so no other code had
+    /// to change.
+    @AppStorage("morse.speed") private var speedRaw: Int = MorseSpeed.medium.rawValue
+
+    /// Currently-selected preset. Setting this writes through to
+    /// `speedRaw` so AppStorage persists across launches.
+    private var speed: MorseSpeed {
+        get { MorseSpeed(rawValue: speedRaw) ?? .medium }
+    }
+
+    /// WPM passed to the tone synth, flashlight beacon, and receiver
+    /// playback. Backward-compat shim so all the `wpm:` call-sites
+    /// below keep working unchanged.
+    private var wpm: Int { speed.wpm }
     @AppStorage("morse.flashEnabled") private var flashEnabled: Bool = false
     @AppStorage("chat.sendAsMorse") private var sendAsMorse: Bool = false
 
@@ -261,7 +276,7 @@ struct ChatView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 14) {
                 Toggle(isOn: $sendAsMorse) {
-                    Text("SEND AS MORSE")
+                    Text("MORSE")
                         .walkieLabel(10)
                         .foregroundStyle(DT.text)
                 }
@@ -270,7 +285,7 @@ struct ChatView: View {
                 .fixedSize()
 
                 if sendAsMorse {
-                    wpmControl
+                    speedDropdown
                     flashToggle
                 }
             }
@@ -280,40 +295,40 @@ struct ChatView: View {
         .animation(.easeOut(duration: 0.15), value: sendAsMorse)
     }
 
-    /// Explicit "−  WPM 12  +" rocker. Replaces the earlier `Stepper`
-    /// whose loose +/- buttons read like two mystery controls next to
-    /// the morse toggle. Here the label's welded between the arrows so
-    /// it's obvious what they adjust.
-    private var wpmControl: some View {
-        HStack(spacing: 0) {
-            wpmStepButton(symbol: "minus", enabled: wpm > 5) {
-                if wpm > 5 { wpm -= 1 }
+    /// Slow / Medium / Fast dropdown. Replaces the earlier WPM rocker —
+    /// "words per minute" isn't a concept casual users of a walkie-talkie
+    /// messaging app should have to learn. The concrete WPM each preset
+    /// maps to is defined on `MorseSpeed`.
+    private var speedDropdown: some View {
+        Menu {
+            ForEach(MorseSpeed.allCases, id: \.self) { option in
+                Button {
+                    speedRaw = option.rawValue
+                } label: {
+                    Text(option.label)
+                    if option == speed {
+                        Image(systemName: "checkmark")
+                    }
+                }
             }
-            Text("WPM \(wpm)")
-                .font(DT.mono(11, weight: .bold))
-                .foregroundStyle(DT.text)
-                .frame(minWidth: 58)
-                .frame(height: 32)
-                .background(DT.panel)
-            wpmStepButton(symbol: "plus", enabled: wpm < 30) {
-                if wpm < 30 { wpm += 1 }
+        } label: {
+            HStack(spacing: 6) {
+                Text("SPEED")
+                    .walkieLabel(10)
+                    .foregroundStyle(DT.textDim)
+                Text(speed.label)
+                    .font(DT.mono(11, weight: .bold))
+                    .foregroundStyle(DT.text)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(DT.info)
             }
-        }
-        .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
-    }
-
-    private func wpmStepButton(symbol: String, enabled: Bool,
-                               action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(enabled ? DT.info : DT.textFaint)
-                .frame(width: 28, height: 32)
-                .background(DT.panel)
+            .padding(.horizontal, 10)
+            .frame(height: 32)
+            .background(DT.panel)
+            .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .disabled(!enabled)
-        .accessibilityLabel(symbol == "plus" ? "Increase WPM" : "Decrease WPM")
     }
 
     private var flashToggle: some View {
