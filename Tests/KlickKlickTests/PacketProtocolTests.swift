@@ -38,6 +38,47 @@ final class PacketProtocolTests: XCTestCase {
         XCTAssertEqual(decoded, original)
     }
 
+    func testChatTextRoundtrip() throws {
+        // Chat uses the same wire shape as audio/morse; the distinction
+        // is only the type byte so the receiver can route to the Chat view.
+        let payload = Data("hey, meet at the main stage".utf8)
+        let original = Packet(
+            type: .chatText,
+            sequence: 42,
+            timestampMs: 1_700_000_002_345,
+            nonce: Packet.zeroNonce(),
+            payload: payload
+        )
+        let encoded = original.encode()
+        let decoded = try Packet.decode(encoded)
+        XCTAssertEqual(decoded.type, .chatText)
+        XCTAssertEqual(decoded, original)
+    }
+
+    func testAckCarriesSequenceBytes() throws {
+        // Ack payload is the BE-encoded seq of the packet being acked so
+        // senders can mark that message delivered.
+        let ackedSeq: UInt32 = 0xDEAD_BEEF
+        var payload = Data()
+        payload.append(UInt8((ackedSeq >> 24) & 0xFF))
+        payload.append(UInt8((ackedSeq >> 16) & 0xFF))
+        payload.append(UInt8((ackedSeq >> 8) & 0xFF))
+        payload.append(UInt8(ackedSeq & 0xFF))
+
+        let original = Packet(
+            type: .ack,
+            sequence: 99,
+            timestampMs: 0,
+            nonce: Packet.zeroNonce(),
+            payload: payload
+        )
+        let encoded = original.encode()
+        let decoded = try Packet.decode(encoded)
+        XCTAssertEqual(decoded.type, .ack)
+        XCTAssertEqual(decoded.payload.count, 4)
+        XCTAssertEqual(decoded, original)
+    }
+
     func testPingHasEmptyPayload() throws {
         let pkt = Packet(
             type: .ping,

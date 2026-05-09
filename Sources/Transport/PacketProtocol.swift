@@ -22,6 +22,16 @@ enum PacketType: UInt8, Sendable {
     /// message, still encrypted with libsodium secretbox (same as audio).
     /// The receiver decodes UTF-8 and appends to its RX buffer.
     case morseText = 0x04
+    /// UTF-8 text composed via the Chat screen (system keyboard input).
+    /// Wire identical to `morseText`; the separate type byte lets the
+    /// receiver route it to the Chat view instead of replaying it as beeps.
+    case chatText  = 0x06
+    /// Delivery acknowledgement. Payload is the 4-byte big-endian `sequence`
+    /// of the packet being acknowledged, so the sender can move a message
+    /// from "sending" → "delivered" in the UI. Primarily for LoRa (high
+    /// latency, lossy) but harmless over WiFi / MPC where delivery is
+    /// already observable by other means.
+    case ack       = 0x07
 }
 
 struct Packet: Sendable, Equatable {

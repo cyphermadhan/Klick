@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = DeviceName.current
     @State private var rangeMode: RangeMode = RangeModeStore.current
+    @State private var region: Region = RegionStore.current
     @State private var showingUnpairConfirm = false
     @State private var unpaired = false
 
@@ -48,6 +49,38 @@ struct SettingsView: View {
                                     )
                                 }
                                 Text("CHANGES APPLY AFTER YOU RESTART THE SESSION (STOP → START).")
+                                    .walkieCaption()
+                                    .foregroundStyle(DT.textFaint)
+                            }
+                        }
+
+                        TerminalFrame("REGION") {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Picker("Region", selection: $region) {
+                                    ForEach(Region.allCases, id: \.self) { r in
+                                        Text(r.displayName).tag(r)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .tint(DT.info)
+
+                                if !RegionStore.isUserOverridden {
+                                    // Tell the user we defaulted this from
+                                    // their locale so they know it's a guess
+                                    // they can override.
+                                    Text("AUTO · DEFAULTED FROM YOUR DEVICE LOCALE.")
+                                        .walkieCaption()
+                                        .foregroundStyle(DT.textFaint)
+                                }
+
+                                DotLeader(label: "BAND",      value: region.displayName)
+                                DotLeader(label: "MAX POWER", value: "\(region.maxPowerDbm) DBM")
+                                if let dc = region.dutyCycle {
+                                    DotLeader(label: "DUTY CYCLE",
+                                              value: "\(Int(dc * 100))% / HOUR",
+                                              valueColor: DT.warn)
+                                }
+                                Text("REGION GOVERNS LORA BAND + POWER IN PHASE 3B. TODAY IT'S DISPLAY-ONLY.")
                                     .walkieCaption()
                                     .foregroundStyle(DT.textFaint)
                             }
@@ -138,6 +171,7 @@ struct SettingsView: View {
     private func save() {
         DeviceName.set(name)
         RangeModeStore.set(rangeMode)
+        RegionStore.current = region
         dismiss()
     }
 

@@ -40,14 +40,17 @@ final class PTTSession: ObservableObject {
     /// Rough inbound level in [0,1] from the last received audio packet's payload size.
     @Published private(set) var inboundLevel: Double = 0
 
-    // MARK: Morse
-    /// Fires once per inbound morse message so `MorseView` can replay it
-    /// as beeps/flashes. Transient — cleared immediately after each fire.
+    // MARK: Text (Morse + Chat share this plumbing)
+    /// Fires once per inbound morse message so `ChatView` can replay it
+    /// as beeps / torch flashes. Transient — cleared immediately after
+    /// each fire. Chat messages do NOT populate this (no replay needed).
     @Published private(set) var incomingMorse: String?
-    /// Scrollback shown on the Morse screen. Both sent and received
-    /// messages land here, tagged by direction. Capped to avoid unbounded growth.
-    @Published private(set) var morseHistory: [MorseEntry] = []
-    private static let morseHistoryLimit = 50
+    /// Unified scrollback for both Morse and Chat messages. `kind`
+    /// distinguishes them so the RX list can render Morse with a small
+    /// dit/dah glyph while Chat is plain text. Capped to avoid unbounded
+    /// growth.
+    @Published private(set) var textHistory: [TextEntry] = []
+    private static let textHistoryLimit = 50
 
     /// Loss percentage clamped to a display-friendly 0…100.
     var lossPercent: Double {
@@ -169,11 +172,23 @@ final class PTTSession: ObservableObject {
         outboundLevel = 0
     }
 
-    // MARK: - Morse
+    // MARK: - Text (Morse + Chat)
 
-    /// Encrypt `text` and send it to the selected peer on its transport.
-    /// No-op if not running, not paired, or no peer selected.
+    /// Send a Morse-keyed text message. Encrypts with the shared key and
+    /// routes via the selected peer's transport. No-op if not running,
+    /// not paired, or no peer selected.
     func sendMorse(_ text: String) {
+        sendText(text, kind: .morse, packetType: .morseText)
+    }
+
+    /// Send a keyboard-typed chat message. Same wire format as `sendMorse`
+    /// but a different packet type so the receiver knows not to replay
+    /// it as beeps.
+    func sendChat(_ text: String) {
+        sendText(text, kind: .chat, packetType: .chatText)
+    }
+
+    private func sendText(_ text: String, kind: TextEntry.Kind, packetType: PacketType) {
         guard isRunning,
               let peer = selectedPeer,
               let key = sharedKey,
@@ -183,18 +198,42 @@ final class PTTSession: ObservableObject {
         let bytes = Data(trimmed.utf8)
         do {
             let (ciphertext, nonce) = try crypto.seal(bytes, key: key)
-            transport.sendText(.morseText, payload: ciphertext, nonce: nonce, to: peer)
+            transport.sendText(packetType, payload: ciphertext, nonce: nonce, to: peer)
             packetsSent &+= 1
-            appendMorse(MorseEntry(text: trimmed, isIncoming: false))
+            appendText(TextEntry(text: trimmed, kind: kind, isIncoming: false))
         } catch {
-            log.error("Morse encrypt failed: \(String(describing: error))")
+            log.error("Text encrypt failed: \(String(describing: error))")
         }
     }
 
-    private func appendMorse(_ entry: MorseEntry) {
-        morseHistory.append(entry)
-        if morseHistory.count > Self.morseHistoryLimit {
-            morseHistory.removeFirst(morseHistory.count - Self.morseHistoryLimit)
+    private func appendText(_ entry: TextEntry) {
+        textHistory.append(entry)
+        if textHistory.count > Self.textHistoryLimit {
+            textHistory.removeFirst(textHistory.count - Self.textHistoryLimit)
+        }
+    }
+
+    /// Decrypt an inbound text packet and push it into the scrollback.
+    /// `replayAsBeeps` fires the transient `incomingMorse` publisher
+    /// (Chat messages are silent — no one wants their chat read as beeps).
+    private func handleIncomingText(_ packet: Packet, kind: TextEntry.Kind, replayAsBeeps: Bool) {
+        guard let key = sharedKey else { return }
+        guard let plaintext = crypto.open(ciphertext: packet.payload, key: key, nonce: packet.nonce),
+              let text = String(data: plaintext, encoding: .utf8) else {
+            packetsDropped &+= 1
+            return
+        }
+        packetsReceived &+= 1
+        appendText(TextEntry(text: text, kind: kind, isIncoming: true))
+        if replayAsBeeps {
+            // Pulse once — ChatView/MorseView observes this and re-plays
+            // beeps/flash. Nil afterwards so an idempotent equal-text
+            // message still fires on next receipt.
+            incomingMorse = text
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(20))
+                self?.incomingMorse = nil
+            }
         }
     }
 
@@ -274,26 +313,14 @@ final class PTTSession: ObservableObject {
             inboundLevel = min(1.0, max(0, Double(packet.payload.count - 20) / 80.0))
             pipeline.receive(opusFrame: opusFrame)
         case .morseText:
-            guard let key = sharedKey else { return }
-            guard let plaintext = crypto.open(ciphertext: packet.payload, key: key, nonce: packet.nonce) else {
-                packetsDropped &+= 1
-                return
-            }
-            guard let text = String(data: plaintext, encoding: .utf8) else {
-                packetsDropped &+= 1
-                return
-            }
-            packetsReceived &+= 1
-            appendMorse(MorseEntry(text: text, isIncoming: true))
-            // Pulse once — MorseView observes this and re-plays beeps/flash.
-            // Nil it afterwards so an idempotent equal-text message still fires.
-            incomingMorse = text
-            Task { @MainActor [weak self] in
-                // One runloop tick is enough for SwiftUI to propagate the
-                // publisher change before we clear it.
-                try? await Task.sleep(for: .milliseconds(20))
-                self?.incomingMorse = nil
-            }
+            handleIncomingText(packet, kind: .morse, replayAsBeeps: true)
+        case .chatText:
+            handleIncomingText(packet, kind: .chat, replayAsBeeps: false)
+        case .ack:
+            // Delivery ack — logged but not yet wired into a UI status.
+            // Phase 3b will add per-message "sending/delivered" state that
+            // reads this to flip indicators.
+            log.info("Received ack for seq \(packet.payload.hexPrefix, privacy: .public)")
         case .ping:
             // Auto-respond with a pong so callers can use it for reachability checks.
             // No payload, no sequence coordination needed in M6.
@@ -304,10 +331,25 @@ final class PTTSession: ObservableObject {
     }
 }
 
-/// One entry in the Morse scrollback. `isIncoming` drives the `◂` / `▸`
-/// arrow and color in `MorseView`.
-struct MorseEntry: Identifiable, Equatable, Sendable {
+/// One entry in the Chat/Morse scrollback. `kind` drives the prefix glyph
+/// (dit/dah for Morse, none for Chat) and `isIncoming` the arrow direction
+/// in `ChatView`.
+struct TextEntry: Identifiable, Equatable, Sendable {
+    enum Kind: String, Sendable, Codable {
+        case morse
+        case chat
+    }
+
     let id = UUID()
     let text: String
+    let kind: Kind
     let isIncoming: Bool
+}
+
+private extension Data {
+    /// Short hex dump used for log lines where we want to identify a packet
+    /// without spamming the whole payload.
+    var hexPrefix: String {
+        prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
 }
