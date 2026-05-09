@@ -1,5 +1,4 @@
 import Foundation
-import Network
 import os
 
 /// Top-level coordinator that owns every subsystem and exposes a small
@@ -7,10 +6,12 @@ import os
 /// "pick this peer".
 ///
 /// Responsibilities:
-/// - Start the UDP listener and advertise it via Bonjour.
-/// - Start the Bonjour browser and publish peer changes.
-/// - On mic frame: encrypt → send to selected peer.
-/// - On UDP receive: decrypt → enqueue for playback.
+/// - Start the configured transports (WiFi/UDP, Nearby/MPC, or both —
+///   driven by the user's RangeMode preference).
+/// - Start audio capture + playback.
+/// - On mic frame: encrypt → send to selected peer on its own transport.
+/// - On transport receive: decrypt → enqueue for playback.
+/// - Merge per-transport peer lists into a single `PeerDirectory` for the UI.
 ///
 /// Only transmits while `isTransmitting` is true (PTT button held).
 @MainActor
@@ -48,13 +49,16 @@ final class PTTSession: ObservableObject {
 
     // Sub-systems
     let pipeline = AudioPipeline()
-    let transport = UDPTransport()
-    let browser = BonjourBrowser()
+    let directory = PeerDirectory()
     private let crypto = CryptoService()
     private let pairing = PairingService()
     private let sounds = WalkieSoundSynth()
-    private let log = Logger(subsystem: "com.klick.walkietalkie", category: "PTTSession")
+    private let log = Logger(subsystem: "world.madhans.klick", category: "PTTSession")
 
+    /// Transports spun up on start() based on `RangeModeStore.current`.
+    /// Keyed by their `.kind` so outbound audio can route by peer transport
+    /// without a linear scan.
+    private var transports: [PeerTransport: AudioTransport] = [:]
     private var sharedKey: Data?
 
     init() {
@@ -63,7 +67,6 @@ final class PTTSession: ObservableObject {
         self.keyFingerprint = existingKey.map(PairingService.fingerprint(of:))
         self.pipeline.loopback = false
         wireAudioToTransport()
-        wireTransportToAudio()
     }
 
     // MARK: - Lifecycle
@@ -91,29 +94,50 @@ final class PTTSession: ObservableObject {
             return
         }
 
-        // Start transport + Bonjour.
+        // Spin up the transports for the user's selected range mode.
+        let name = DeviceName.current
+        let mode = RangeModeStore.current
+        directory.selfName = name
+        directory.isBrowsing = true
+
+        var startedTransports: [PeerTransport: AudioTransport] = [:]
         do {
-            let name = DeviceName.current
-            try transport.start(advertisingAs: name)
-            browser.selfName = name
-            browser.start()
-            // Synth engine piggybacks on the already-active AVAudioSession;
-            // starting it here means the first PTT press has no warm-up delay.
-            sounds.start()
-            isRunning = true
-            log.info("PTT session running as \(name, privacy: .public)")
+            if mode.includesWifi {
+                let wifi = UDPTransport()
+                wireTransport(wifi)
+                try wifi.start(advertisingAs: name)
+                startedTransports[.wifi] = wifi
+            }
+            if mode.includesNearby {
+                let mpc = MPCTransport()
+                wireTransport(mpc)
+                try mpc.start(advertisingAs: name)
+                startedTransports[.nearby] = mpc
+            }
         } catch {
             errorMessage = "Network start failed: \(error.localizedDescription)"
+            startedTransports.values.forEach { $0.stop() }
             pipeline.stop()
-            isRunning = false
+            directory.isBrowsing = false
+            return
         }
+
+        self.transports = startedTransports
+
+        // Synth engine piggybacks on the already-active AVAudioSession;
+        // starting it here means the first PTT press has no warm-up delay.
+        sounds.start()
+        isRunning = true
+        log.info("PTT session running as \(name, privacy: .public) · mode=\(mode.rawValue, privacy: .public)")
     }
 
     func stop() {
         isTransmitting = false
         pipeline.stop()
-        transport.stop()
-        browser.stop()
+        transports.values.forEach { $0.stop() }
+        transports.removeAll()
+        directory.clear()
+        directory.isBrowsing = false
         sounds.stop()
         isRunning = false
     }
@@ -156,10 +180,18 @@ final class PTTSession: ObservableObject {
         }
     }
 
-    private func wireTransportToAudio() {
-        transport.onReceive = { [weak self] packet, _ in
+    /// Wire a single transport's receive + peer callbacks back to this
+    /// session. Called for each transport brought up in `start()`.
+    private func wireTransport(_ transport: AudioTransport) {
+        transport.onReceive = { [weak self] packet in
             Task { @MainActor in
                 self?.handleIncoming(packet)
+            }
+        }
+        let kind = transport.kind
+        transport.onPeersChanged = { [weak self] peers in
+            Task { @MainActor in
+                self?.directory.update(peers, from: kind)
             }
         }
     }
@@ -167,10 +199,11 @@ final class PTTSession: ObservableObject {
     private func handleOutgoingAudio(_ opusFrame: Data) {
         guard isTransmitting,
               let peer = selectedPeer,
-              let key = sharedKey else { return }
+              let key = sharedKey,
+              let transport = transports[peer.transport] else { return }
         do {
             let (ciphertext, nonce) = try crypto.seal(opusFrame, key: key)
-            transport.sendAudio(opusPayload: ciphertext, nonce: nonce, to: peer.endpoint)
+            transport.sendAudio(opusPayload: ciphertext, nonce: nonce, to: peer)
             packetsSent &+= 1
             // Use the encoded packet size as a crude proxy for input level —
             // Opus packets grow with signal complexity. Clamp to a reasonable
@@ -193,6 +226,9 @@ final class PTTSession: ObservableObject {
             }
             if let last = lastIncomingSequence, packet.sequence > last &+ 1 {
                 // Sequence jumped — infer packets lost in between.
+                // Note: sequence numbers are per-transport, so switching
+                // between peers on different transports will cause a false
+                // "lost" spike. Acceptable for now (diagnostic only).
                 packetsLost &+= packet.sequence - last - 1
             }
             lastIncomingSequence = packet.sequence

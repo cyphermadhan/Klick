@@ -1,12 +1,12 @@
 import XCTest
-@testable import WalkieTalkie
+@testable import KlickKlick
 
 final class PairingServiceTests: XCTestCase {
 
     /// Use a unique service name per test so the shared Keychain can't collide
     /// with a previous run's leftover key on the simulator.
     private func makeService() -> PairingService {
-        let store = KeyStore(service: "com.klick.walkietalkie.tests.\(UUID().uuidString)")
+        let store = KeyStore(service: "world.madhans.klick.tests.\(UUID().uuidString)")
         return PairingService(store: store)
     }
 

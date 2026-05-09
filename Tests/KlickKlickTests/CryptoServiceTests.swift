@@ -1,5 +1,5 @@
 import XCTest
-@testable import WalkieTalkie
+@testable import KlickKlick
 
 final class CryptoServiceTests: XCTestCase {
 

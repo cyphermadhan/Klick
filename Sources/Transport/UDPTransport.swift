@@ -2,51 +2,59 @@ import Foundation
 import Network
 import os
 
-/// Symmetric UDP transport for PTT.
+/// `AudioTransport` implementation over Bonjour + UDP (infrastructure WiFi).
 ///
-/// Each app instance:
-///   • Binds an `NWListener` on an ephemeral UDP port to *receive* from peers.
-///     The chosen port is published to Bonjour in M5.
-///   • Opens an `NWConnection` per peer endpoint to *send* audio frames.
+/// Owns three pieces of Network.framework state:
+///   • `NWListener` — accepts inbound UDP datagrams from peers; advertises
+///     ourselves under `_walkie._udp.` so other Klick instances can find us.
+///   • `NWBrowser`  — discovers peers advertising the same Bonjour service.
+///     Emits peer additions / removals through `onPeersChanged`.
+///   • `NWConnection` map — one per peer we're actively sending to.
 ///
-/// At M2 we only expose basic send/receive with raw `Packet` framing. The
-/// jitter buffer, re-ordering, and loss detection live in M6.
-final class UDPTransport: @unchecked Sendable {
+/// All state mutation happens on a single serial `DispatchQueue`. Callbacks
+/// (`onReceive`, `onPeersChanged`) fire on that same queue; the owner hops
+/// to the main actor before touching UI state (see `PTTSession`).
+final class UDPTransport: AudioTransport, @unchecked Sendable {
     enum TransportError: Error, Sendable {
         case notStarted
         case listenerFailed(NWError)
         case bindFailed
     }
 
-    private let queue = DispatchQueue(label: "walkie.udp", qos: .userInitiated)
-    private let log = Logger(subsystem: "com.klick.walkietalkie", category: "UDPTransport")
+    let kind: PeerTransport = .wifi
+
+    private let queue = DispatchQueue(label: "klick.udp", qos: .userInitiated)
+    private let log = Logger(subsystem: "world.madhans.klick", category: "UDPTransport")
 
     private var listener: NWListener?
+    private var browser: NWBrowser?
     private var sendConnections: [NWEndpoint: NWConnection] = [:]
     private var boundPort: UInt16?
     private var outgoingSequence: UInt32 = 0
 
-    /// Called on the transport queue whenever a valid packet is received.
-    /// Hop to the main actor before touching UI state.
-    var onReceive: (@Sendable (Packet, NWEndpoint) -> Void)?
+    /// Name → endpoint, populated from Bonjour browse results so `sendAudio`
+    /// can resolve a `PeerInfo` (which carries only the name) back to the
+    /// live `NWEndpoint` the current discovery round produced.
+    private var endpointsByName: [String: NWEndpoint] = [:]
+    private var selfName: String?
+
+    // MARK: AudioTransport
+
+    var onReceive: (@Sendable (Packet) -> Void)?
+    var onPeersChanged: (@Sendable ([PeerInfo]) -> Void)?
 
     /// The local UDP port we bound to. Available after `start()` succeeds.
     var localPort: UInt16? { queue.sync { boundPort } }
 
-    /// Start listening for inbound UDP packets. Picks an ephemeral port.
-    ///
-    /// If `serviceName` is provided, the listener is also registered with
-    /// Bonjour under `_walkie._udp.` so other devices' `BonjourBrowser`
-    /// can find us. The name is typically the user's device name.
-    func start(advertisingAs serviceName: String? = nil) throws {
-        let params = NWParameters.udp
-        params.allowLocalEndpointReuse = true
-        params.includePeerToPeer = true
-        let listener = try NWListener(using: params)
+    func start(advertisingAs serviceName: String) throws {
+        queue.sync { self.selfName = serviceName }
 
-        if let serviceName {
-            listener.service = NWListener.Service(name: serviceName, type: "_walkie._udp.")
-        }
+        // Listener: accept inbound UDP + advertise via Bonjour.
+        let listenerParams = NWParameters.udp
+        listenerParams.allowLocalEndpointReuse = true
+        listenerParams.includePeerToPeer = true
+        let listener = try NWListener(using: listenerParams)
+        listener.service = NWListener.Service(name: serviceName, type: "_walkie._udp.")
 
         listener.stateUpdateHandler = { [weak self] state in
             guard let self else { return }
@@ -69,34 +77,60 @@ final class UDPTransport: @unchecked Sendable {
 
         listener.start(queue: queue)
         self.listener = listener
+
+        // Browser: discover other Klick peers on the network.
+        let descriptor = NWBrowser.Descriptor.bonjour(type: "_walkie._udp.", domain: nil)
+        let browserParams = NWParameters()
+        browserParams.includePeerToPeer = true
+        let browser = NWBrowser(for: descriptor, using: browserParams)
+
+        browser.stateUpdateHandler = { [weak self] state in
+            guard let self else { return }
+            switch state {
+            case let .failed(err):
+                self.log.error("Bonjour browser failed: \(String(describing: err))")
+            default:
+                break
+            }
+        }
+
+        browser.browseResultsChangedHandler = { [weak self] results, _ in
+            self?.handleBrowseResults(results)
+        }
+
+        browser.start(queue: queue)
+        self.browser = browser
     }
 
     func stop() {
         queue.sync {
             listener?.cancel()
             listener = nil
+            browser?.cancel()
+            browser = nil
             for (_, conn) in sendConnections { conn.cancel() }
             sendConnections.removeAll()
+            endpointsByName.removeAll()
             boundPort = nil
+            selfName = nil
         }
+        // Clear peers in the directory. Keep this outside the queue.sync to
+        // avoid re-entering the queue from the owner's callback implementation.
+        onPeersChanged?([])
     }
 
-    /// Send a pre-built `Packet` to a peer. The caller owns sequence numbering
-    /// when they build the packet; `sendAudio` / `sendPing` below do it for you.
-    func send(_ packet: Packet, to endpoint: NWEndpoint) {
-        let data = packet.encode()
+    func sendAudio(opusPayload: Data, nonce: Data, to peer: PeerInfo) {
+        guard peer.transport == .wifi else { return }
         queue.async { [weak self] in
             guard let self else { return }
-            let conn = self.connection(to: endpoint)
-            conn.send(content: data, completion: .contentProcessed { [weak self] error in
-                if let error { self?.log.error("UDP send failed: \(String(describing: error))") }
-            })
-        }
-    }
-
-    func sendAudio(opusPayload: Data, nonce: Data, to endpoint: NWEndpoint) {
-        queue.async { [weak self] in
-            guard let self else { return }
+            // Prefer the endpoint carried on the PeerInfo (from browse
+            // results); fall back to our internal map in case the caller
+            // holds an older PeerInfo than the current discovery round.
+            let endpoint = peer.endpoint ?? self.endpointsByName[peer.name]
+            guard let endpoint else {
+                self.log.error("sendAudio: no endpoint for peer \(peer.name, privacy: .public)")
+                return
+            }
             self.outgoingSequence &+= 1
             let pkt = Packet(
                 type: .audio,
@@ -106,6 +140,13 @@ final class UDPTransport: @unchecked Sendable {
                 payload: opusPayload
             )
             self.sendInternal(pkt, to: endpoint)
+        }
+    }
+
+    /// Back-door used by tests + Phase 0 diagnostics to send a raw Packet.
+    func send(_ packet: Packet, to endpoint: NWEndpoint) {
+        queue.async { [weak self] in
+            self?.sendInternal(packet, to: endpoint)
         }
     }
 
@@ -170,7 +211,7 @@ final class UDPTransport: @unchecked Sendable {
             if let data, !data.isEmpty {
                 do {
                     let pkt = try Packet.decode(data)
-                    self.onReceive?(pkt, connection.endpoint)
+                    self.onReceive?(pkt)
                 } catch {
                     self.log.error("Packet decode failed: \(String(describing: error))")
                 }
@@ -181,5 +222,21 @@ final class UDPTransport: @unchecked Sendable {
             }
             self.receiveNext(on: connection)
         }
+    }
+
+    private func handleBrowseResults(_ results: Set<NWBrowser.Result>) {
+        var nextByName: [String: NWEndpoint] = [:]
+        var peers: [PeerInfo] = []
+        for result in results {
+            guard case let .service(name, _, _, _) = result.endpoint else { continue }
+            if let selfName, name == selfName { continue }
+            nextByName[name] = result.endpoint
+            peers.append(PeerInfo(name: name, transport: .wifi, endpoint: result.endpoint))
+        }
+        self.endpointsByName = nextByName
+        // Stable alphabetical ordering — matches what `BonjourBrowser` used
+        // to produce, so the UI has consistent row positions.
+        peers.sort { $0.name < $1.name }
+        onPeersChanged?(peers)
     }
 }

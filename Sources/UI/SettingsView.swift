@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = DeviceName.current
+    @State private var rangeMode: RangeMode = RangeModeStore.current
     @State private var showingUnpairConfirm = false
     @State private var unpaired = false
 
@@ -32,6 +33,21 @@ struct SettingsView: View {
                                     .background(DT.panel)
                                     .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
                                 Text("SHOWN TO OTHER DEVICES DURING DISCOVERY.")
+                                    .walkieCaption()
+                                    .foregroundStyle(DT.textFaint)
+                            }
+                        }
+
+                        TerminalFrame("RANGE MODE") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(RangeMode.allCases, id: \.self) { mode in
+                                    RangeModeRow(
+                                        mode: mode,
+                                        isSelected: rangeMode == mode,
+                                        onTap: { rangeMode = mode }
+                                    )
+                                }
+                                Text("CHANGES APPLY AFTER YOU RESTART THE SESSION (STOP → START).")
                                     .walkieCaption()
                                     .foregroundStyle(DT.textFaint)
                             }
@@ -121,6 +137,7 @@ struct SettingsView: View {
 
     private func save() {
         DeviceName.set(name)
+        RangeModeStore.set(rangeMode)
         dismiss()
     }
 
@@ -128,5 +145,44 @@ struct SettingsView: View {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0"
         let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
         return "\(v).\(b)"
+    }
+}
+
+/// One row in the RANGE MODE picker. Radio-button style: a filled square
+/// for the selected row, hollow for others. Tap area covers the whole row.
+private struct RangeModeRow: View {
+    let mode: RangeMode
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            // "●" filled / "○" hollow indicator, styled as a mono glyph so
+            // it aligns with the rest of the terminal look.
+            ZStack {
+                Rectangle()
+                    .strokeBorder(isSelected ? DT.ok : DT.border, lineWidth: 1)
+                    .frame(width: 12, height: 12)
+                if isSelected {
+                    Rectangle()
+                        .fill(DT.ok)
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .padding(.top, 3)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(mode.displayName)
+                    .walkieLabel(12, weight: .bold)
+                    .foregroundStyle(isSelected ? DT.text : DT.textDim)
+                Text(mode.subtitle)
+                    .walkieCaption()
+                    .foregroundStyle(DT.textFaint)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .contentShape(.rect)
+        .onTapGesture(perform: onTap)
     }
 }

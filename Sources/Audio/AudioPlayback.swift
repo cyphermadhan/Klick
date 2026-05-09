@@ -10,7 +10,7 @@ final class AudioPlayback {
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private let decoder: OpusDecoder
-    private let log = Logger(subsystem: "com.klick.walkietalkie", category: "AudioPlayback")
+    private let log = Logger(subsystem: "world.madhans.klick", category: "AudioPlayback")
 
     init() throws {
         self.decoder = try OpusDecoder()

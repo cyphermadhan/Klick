@@ -14,7 +14,7 @@ import os
 final class WalkieSoundSynth {
     private var pressPlayer: AVAudioPlayer?
     private var releasePlayer: AVAudioPlayer?
-    private let log = Logger(subsystem: "com.klick.walkietalkie", category: "WalkieSoundSynth")
+    private let log = Logger(subsystem: "world.madhans.klick", category: "WalkieSoundSynth")
 
     init() {
         pressPlayer = makePlayer(name: "walkie-press")

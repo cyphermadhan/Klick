@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8485C165DB930684087755A9"
-               BuildableName = "WalkieTalkie.app"
-               BlueprintName = "WalkieTalkie"
-               ReferencedContainer = "container:WalkieTalkie.xcodeproj">
+               BlueprintIdentifier = "2C0B6F4C3EE88E81492ABAE6"
+               BuildableName = "KlickKlick.app"
+               BlueprintName = "KlickKlick"
+               ReferencedContainer = "container:KlickKlick.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8485C165DB930684087755A9"
-            BuildableName = "WalkieTalkie.app"
-            BlueprintName = "WalkieTalkie"
-            ReferencedContainer = "container:WalkieTalkie.xcodeproj">
+            BlueprintIdentifier = "2C0B6F4C3EE88E81492ABAE6"
+            BuildableName = "KlickKlick.app"
+            BlueprintName = "KlickKlick"
+            ReferencedContainer = "container:KlickKlick.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -44,10 +44,10 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "0CB0F90E9A9EF45B1DF38AB5"
-               BuildableName = "WalkieTalkieTests.xctest"
-               BlueprintName = "WalkieTalkieTests"
-               ReferencedContainer = "container:WalkieTalkie.xcodeproj">
+               BlueprintIdentifier = "84494607154521134D3EB96F"
+               BuildableName = "KlickKlickTests.xctest"
+               BlueprintName = "KlickKlickTests"
+               ReferencedContainer = "container:KlickKlick.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -68,10 +68,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8485C165DB930684087755A9"
-            BuildableName = "WalkieTalkie.app"
-            BlueprintName = "WalkieTalkie"
-            ReferencedContainer = "container:WalkieTalkie.xcodeproj">
+            BlueprintIdentifier = "2C0B6F4C3EE88E81492ABAE6"
+            BuildableName = "KlickKlick.app"
+            BlueprintName = "KlickKlick"
+            ReferencedContainer = "container:KlickKlick.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -87,10 +87,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8485C165DB930684087755A9"
-            BuildableName = "WalkieTalkie.app"
-            BlueprintName = "WalkieTalkie"
-            ReferencedContainer = "container:WalkieTalkie.xcodeproj">
+            BlueprintIdentifier = "2C0B6F4C3EE88E81492ABAE6"
+            BuildableName = "KlickKlick.app"
+            BlueprintName = "KlickKlick"
+            ReferencedContainer = "container:KlickKlick.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>

@@ -25,7 +25,7 @@ struct ContentView: View {
                 statusTiles
 
                 TerminalFrame("PEERS") {
-                    PeerListView(browser: session.browser,
+                    PeerListView(directory: session.directory,
                                  selectedPeer: $session.selectedPeer)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -182,10 +182,10 @@ struct ContentView: View {
         if let peer = session.selectedPeer {
             return "TARGET · \(peer.name.uppercased())"
         }
-        if session.browser.peers.isEmpty {
+        if session.directory.peers.isEmpty {
             return "NO PEERS IN RANGE"
         }
-        return "\(session.browser.peers.count) SEEN · SELECT ONE"
+        return "\(session.directory.peers.count) SEEN · SELECT ONE"
     }
 
     // MARK: - Diagnostic strip

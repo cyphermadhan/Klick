@@ -1,6 +1,6 @@
 import XCTest
 import Network
-@testable import WalkieTalkie
+@testable import KlickKlick
 
 final class UDPTransportTests: XCTestCase {
 
@@ -12,8 +12,8 @@ final class UDPTransportTests: XCTestCase {
     func testLocalhostMultiplePacketsReceived() throws {
         let sender = UDPTransport()
         let receiver = UDPTransport()
-        try sender.start()
-        try receiver.start()
+        try sender.start(advertisingAs: "test-sender")
+        try receiver.start(advertisingAs: "test-receiver")
 
         let bound = expectation(description: "listeners bound")
         Task {
@@ -37,7 +37,7 @@ final class UDPTransportTests: XCTestCase {
         final class Box: @unchecked Sendable { var seq: [UInt32] = [] }
         let box = Box()
         let lock = NSLock()
-        receiver.onReceive = { packet, _ in
+        receiver.onReceive = { packet in
             lock.lock()
             box.seq.append(packet.sequence)
             lock.unlock()
@@ -48,11 +48,12 @@ final class UDPTransportTests: XCTestCase {
             host: .ipv4(.loopback),
             port: NWEndpoint.Port(rawValue: receiverPort)!
         )
+        let receiverPeer = PeerInfo(name: "test-receiver", transport: .wifi, endpoint: endpoint)
         for i in 0..<expectedCount {
             sender.sendAudio(
                 opusPayload: Data([UInt8(i)]),
                 nonce: Packet.zeroNonce(),
-                to: endpoint
+                to: receiverPeer
             )
         }
 
@@ -67,8 +68,8 @@ final class UDPTransportTests: XCTestCase {
     func testLocalhostRoundtrip() throws {
         let sender = UDPTransport()
         let receiver = UDPTransport()
-        try sender.start()
-        try receiver.start()
+        try sender.start(advertisingAs: "test-sender")
+        try receiver.start(advertisingAs: "test-receiver")
 
         // Wait for both listeners to bind.
         let bound = expectation(description: "listeners bound")
@@ -86,7 +87,7 @@ final class UDPTransportTests: XCTestCase {
 
         let received = expectation(description: "packet received")
         let expectedPayload = Data([0xDE, 0xAD, 0xBE, 0xEF])
-        receiver.onReceive = { packet, _ in
+        receiver.onReceive = { packet in
             XCTAssertEqual(packet.type, .audio)
             XCTAssertEqual(packet.payload, expectedPayload)
             received.fulfill()
@@ -96,10 +97,11 @@ final class UDPTransportTests: XCTestCase {
             host: .ipv4(.loopback),
             port: NWEndpoint.Port(rawValue: receiverPort)!
         )
+        let receiverPeer = PeerInfo(name: "test-receiver", transport: .wifi, endpoint: endpoint)
         sender.sendAudio(
             opusPayload: expectedPayload,
             nonce: Packet.zeroNonce(),
-            to: endpoint
+            to: receiverPeer
         )
 
         wait(for: [received], timeout: 5)

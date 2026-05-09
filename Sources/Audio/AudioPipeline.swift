@@ -21,7 +21,7 @@ final class AudioPipeline: ObservableObject {
 
     private var capture: AudioCapture?
     private var playback: AudioPlayback?
-    private let log = Logger(subsystem: "com.klick.walkietalkie", category: "AudioPipeline")
+    private let log = Logger(subsystem: "world.madhans.klick", category: "AudioPipeline")
 
     func start() async {
         guard !isRunning else { return }

@@ -25,7 +25,7 @@ import os
 /// BT headset are actually connected.
 final class AudioSessionManager: @unchecked Sendable {
     static let shared = AudioSessionManager()
-    private let log = Logger(subsystem: "com.klick.walkietalkie", category: "AudioSession")
+    private let log = Logger(subsystem: "world.madhans.klick", category: "AudioSession")
     private var routeObserver: NSObjectProtocol?
 
     private init() {

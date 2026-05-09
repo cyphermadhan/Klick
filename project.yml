@@ -1,6 +1,6 @@
-name: WalkieTalkie
+name: KlickKlick
 options:
-  bundleIdPrefix: com.klick
+  bundleIdPrefix: world.madhans
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
@@ -16,7 +16,7 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: minimal
     MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "2"
+    CURRENT_PROJECT_VERSION: "1"
     IPHONEOS_DEPLOYMENT_TARGET: "16.0"
     TARGETED_DEVICE_FAMILY: "1"
     ENABLE_PREVIEWS: "YES"
@@ -53,7 +53,7 @@ packages:
     from: 0.9.1
 
 targets:
-  WalkieTalkie:
+  KlickKlick:
     type: application
     platform: iOS
     # Both configs read Signing.xcconfig — a gitignored file the developer
@@ -90,8 +90,18 @@ targets:
         NSMicrophoneUsageDescription: Used for push-to-talk voice communication.
         NSLocalNetworkUsageDescription: Used to discover and communicate with nearby devices.
         NSCameraUsageDescription: Used to scan pairing QR codes.
+        # Bluetooth is required by MultipeerConnectivity (the "Nearby" transport).
+        # iOS will surface this string in the permission prompt that fires the
+        # first time MPC starts advertising/browsing with no WiFi infra present.
+        NSBluetoothAlwaysUsageDescription: Used to discover and talk to nearby devices when WiFi is unavailable.
         NSBonjourServices:
           - _walkie._udp.
+          # MultipeerConnectivity registers its service type under both
+          # _tcp. and _udp. subdomains on the local network. Both must be
+          # declared or iOS 14+ blocks the browse/advertise with no visible
+          # error. Service type stays ≤15 chars per MPC's rules.
+          - _klick-ptt-v1._tcp.
+          - _klick-ptt-v1._udp.
         # Export compliance. The app uses standard cryptography (libsodium
         # crypto_secretbox: XSalsa20 + Poly1305) purely to protect user
         # data (voice packets) — which qualifies for the primary exemption
@@ -109,7 +119,7 @@ targets:
         product: Sodium
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.klick.walkietalkie
+        PRODUCT_BUNDLE_IDENTIFIER: world.madhans.klick
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         GENERATE_INFOPLIST_FILE: "NO"
@@ -119,29 +129,29 @@ targets:
         # here on the target as well.
         TARGETED_DEVICE_FAMILY: "1"
 
-  WalkieTalkieTests:
+  KlickKlickTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: Tests/WalkieTalkieTests
+      - path: Tests/KlickKlickTests
     dependencies:
-      - target: WalkieTalkie
+      - target: KlickKlick
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.klick.walkietalkie.tests
+        PRODUCT_BUNDLE_IDENTIFIER: world.madhans.klick.tests
         GENERATE_INFOPLIST_FILE: "YES"
 
 schemes:
-  WalkieTalkie:
+  KlickKlick:
     build:
       targets:
-        WalkieTalkie: all
+        KlickKlick: all
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - WalkieTalkieTests
+        - KlickKlickTests
     profile:
       config: Release
     analyze:

@@ -11,7 +11,7 @@ final class AudioCapture {
     private let encoder: OpusEncoder
     private let ring = FloatRingBuffer(capacity: Int(AudioFormats.frameSize) * 8)
     private var formatConverter: AVAudioConverter?
-    private let log = Logger(subsystem: "com.klick.walkietalkie", category: "AudioCapture")
+    private let log = Logger(subsystem: "world.madhans.klick", category: "AudioCapture")
 
     /// Fires once per 20 ms frame of captured audio. Payload is the encoded Opus packet.
     var onFrame: ((Data) -> Void)?

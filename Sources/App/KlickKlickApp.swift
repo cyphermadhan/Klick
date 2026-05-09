@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct WalkieTalkieApp: App {
+struct KlickKlickApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

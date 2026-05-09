@@ -15,7 +15,7 @@ final class KeyStore: Sendable {
     private let service: String
     private let account: String
 
-    init(service: String = "com.klick.walkietalkie.sharedkey", account: String = "default") {
+    init(service: String = "world.madhans.klick.sharedkey", account: String = "default") {
         self.service = service
         self.account = account
     }

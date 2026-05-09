@@ -24,9 +24,13 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Used to discover and talk to nearby devices when WiFi is unavailable.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_walkie._udp.</string>
+		<string>_klick-ptt-v1._tcp.</string>
+		<string>_klick-ptt-v1._udp.</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Used to scan pairing QR codes.</string>

@@ -1,23 +1,26 @@
 import SwiftUI
-import Network
 
 /// Monospace list of discovered peers. Each row renders as a dot-leader
-/// readout: `> NAME........ STATUS  ▪▪▪▪▫`. Tapping selects a peer.
+/// readout: `> NAME........ [WIFI] RDY  ▪▪▪▪▫`. Tapping selects a peer.
+///
+/// The transport pill (`WIFI` / `NEAR`) appears on every row so users know
+/// which link they'd be talking over — meaningful once RangeMode can
+/// surface peers from both paths simultaneously.
 struct PeerListView: View {
-    @ObservedObject var browser: BonjourBrowser
+    @ObservedObject var directory: PeerDirectory
     @Binding var selectedPeer: PeerInfo?
 
     var body: some View {
         Group {
-            if browser.peers.isEmpty {
+            if directory.peers.isEmpty {
                 emptyState
             } else {
                 VStack(spacing: 0) {
-                    ForEach(browser.peers) { peer in
+                    ForEach(directory.peers) { peer in
                         PeerRow(peer: peer,
                                 isSelected: peer == selectedPeer,
                                 onTap: { selectedPeer = peer })
-                        if peer.id != browser.peers.last?.id {
+                        if peer.id != directory.peers.last?.id {
                             Rectangle()
                                 .fill(DT.border)
                                 .frame(height: 1)
@@ -32,13 +35,13 @@ struct PeerListView: View {
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
-                PulsingDot(color: browser.isBrowsing ? DT.info : DT.textDim)
-                Text(browser.isBrowsing ? "SCANNING" : "OFFLINE")
+                PulsingDot(color: directory.isBrowsing ? DT.info : DT.textDim)
+                Text(directory.isBrowsing ? "SCANNING" : "OFFLINE")
                     .walkieLabel(11)
                     .foregroundStyle(DT.textDim)
             }
-            Text(browser.isBrowsing
-                 ? "NO PEERS FOUND ON LOCAL NET"
+            Text(directory.isBrowsing
+                 ? "NO PEERS IN RANGE · WIFI + NEARBY"
                  : "TAP START TO BEGIN DISCOVERY")
                 .walkieCaption()
                 .foregroundStyle(DT.textFaint)
@@ -74,6 +77,8 @@ private struct PeerRow: View {
             }
             .frame(height: 14)
 
+            transportPill
+
             Text("RDY")
                 .font(DT.mono(11, weight: .bold))
                 .tracking(1)
@@ -88,9 +93,24 @@ private struct PeerRow: View {
         .onTapGesture(perform: onTap)
     }
 
+    /// Compact transport tag (WIFI / NEAR). Color-coded for scannability —
+    /// nearby has a warmer tint since it's the "walked up to them" mode.
+    private var transportPill: some View {
+        let tint: Color = peer.transport == .wifi ? DT.info : DT.warn
+        return Text(peer.transport.tag)
+            .font(DT.mono(10, weight: .bold))
+            .tracking(1)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .overlay(
+                Rectangle().strokeBorder(tint.opacity(0.5), lineWidth: 1)
+            )
+    }
+
     /// 5-cell signal meter. We don't measure real signal yet — peers we
-    /// can see via Bonjour are considered fully "in range" so we show 5/5
-    /// by default. Will be driven by real ping RTT in a future milestone.
+    /// can see are considered fully "in range" so we show 5/5 by default.
+    /// Will be driven by real ping RTT in a future milestone.
     private var signalMeter: some View {
         HStack(spacing: 2) {
             ForEach(0..<5, id: \.self) { i in

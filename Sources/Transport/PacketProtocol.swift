@@ -15,9 +15,9 @@ import Foundation
 /// Header is exactly 40 bytes. Kept deliberately small and endian-explicit
 /// so the wire format is stable across M2 (no crypto) and M3 (real crypto).
 enum PacketType: UInt8, Sendable {
-    case audio = 0x01
-    case ping  = 0x02
-    case pong  = 0x03
+    case audio     = 0x01
+    case ping      = 0x02
+    case pong      = 0x03
 }
 
 struct Packet: Sendable, Equatable {

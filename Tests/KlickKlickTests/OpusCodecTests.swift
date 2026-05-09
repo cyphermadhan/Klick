@@ -1,6 +1,6 @@
 import XCTest
 import AVFoundation
-@testable import WalkieTalkie
+@testable import KlickKlick
 
 final class OpusCodecTests: XCTestCase {
 
