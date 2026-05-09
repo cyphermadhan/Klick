@@ -1,62 +1,45 @@
 import SwiftUI
 
-/// Text-messaging screen with two input modes under one header:
+/// Text messaging screen, simplified from the earlier tree-keying UI.
 ///
-///   - **CHAT** — system keyboard, plain text composer. Fast and familiar
-///     for anyone who's ever typed on a phone. Sends as `.chatText`.
-///   - **MORSE** — tree-driven dit/dah keying with audio beeps, flashlight
-///     pulses, KEY or TAP input, WPM-configurable. Sends as `.morseText`.
+/// One composer, one RX scroll, one send button. The only per-send
+/// choice is "Send as Morse" — a switch next to the send button. When
+/// on, the outgoing text is beeped locally through the tone synth, the
+/// flashlight pulses if FLASH is enabled, and the message goes out as
+/// `.morseText` so the receiver can replay it the same way. When off,
+/// it's a silent `.chatText` send.
 ///
-/// Both modes share the same RX scroll (`PTTSession.textHistory`) so you
-/// can reply to a keyboard-typed message with Morse, or vice versa. The
-/// RX entry's `kind` drives a small prefix glyph (`· −` for Morse, none
-/// for Chat) so the list stays readable.
+/// The preset phrase chips (SOS, HELP, OK, …) insert into the composer
+/// rather than sending directly — lets the user tweak before transmit.
 ///
-/// Received Morse messages also replay as beeps / flashes, gated on
-/// `incomingMorse` — chat arrivals are silent.
+/// A `LISTEN` button opens `ListenView`, which runs a camera or audio
+/// decoder and pipes decoded characters back as a received Morse entry.
 struct ChatView: View {
     @ObservedObject var session: PTTSession
-    /// Mesh delivery state for outgoing rows. Explicit observation
-    /// (rather than reading through `session`) is needed because the
-    /// tracker is its own `ObservableObject` — SwiftUI wouldn't re-render
-    /// on its publishes if we only held the session.
     @ObservedObject var tracker: MessageDeliveryTracker
 
-    @StateObject private var tree = MorseTree()
     @StateObject private var tone = MorseTone()
     @StateObject private var beacon = FlashlightBeacon()
 
-    // Persisted user preferences.
-    @AppStorage("chat.mode") private var screenModeRaw: String = ScreenMode.chat.rawValue
     @AppStorage("morse.wpm") private var wpm: Int = 12
     @AppStorage("morse.flashEnabled") private var flashEnabled: Bool = false
-    @AppStorage("morse.mode") private var inputModeRaw: String = MorseInputMode.key.rawValue
+    @AppStorage("chat.sendAsMorse") private var sendAsMorse: Bool = false
 
-    // Chat mode state.
-    @State private var chatDraft: String = ""
-
-    // Morse mode state.
-    @State private var flashChar: Character?
-    @State private var commitTimer: Task<Void, Never>?
-    @State private var tapDownAt: Date?
-    @State private var tapCrossedDah: Bool = false
-    @State private var tapThresholdTask: Task<Void, Never>?
+    @State private var draft: String = ""
+    @State private var showingListen = false
+    @State private var decodedBuffer: String = ""
+    @FocusState private var composerFocused: Bool
 
     @Environment(\.dismiss) private var dismiss
-    @FocusState private var chatFieldFocused: Bool
 
-    /// Auto-commit window. After this many ms of no dit/dah, the current
-    /// path commits to a letter. Twice this is a word gap commit.
-    private let autoCommitMs: Int = 600
-
-    /// Dit/dah boundary in TAP mode: 1.5 dit-units per standard CW.
-    private var tapDahThreshold: TimeInterval {
-        (1.2 / Double(wpm)) * 1.5
-    }
-
-    private var screenMode: ScreenMode {
-        ScreenMode(rawValue: screenModeRaw) ?? .chat
-    }
+    /// Phrases the user can tap to insert into the composer. Grouped for
+    /// the terminal-style divider in the chip row. Keep these short and
+    /// punctuation-free — anything ITU Morse can carry.
+    private static let presetGroups: [[String]] = [
+        ["SOS", "MAYDAY", "HELP"],
+        ["OK", "YES", "NO", "HI", "BYE"],
+        ["ON MY WAY", "WAIT", "READY", "DONE"]
+    ]
 
     var body: some View {
         ZStack {
@@ -64,31 +47,20 @@ struct ChatView: View {
 
             VStack(spacing: 10) {
                 header
-                screenModeToggle
                 rxScroll
-                if screenMode == .chat {
-                    chatComposer
-                } else {
-                    morseSection
-                }
+                presetChips
+                composer
+                morseControls
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
         .preferredColorScheme(.dark)
         .toolbar(.hidden)
-        .onChange(of: tree.buffer) { new in
-            guard let last = new.last, last != " " else { return }
-            flashChar = Character(String(last).uppercased())
-            commitTimer?.cancel()
-            commitTimer = Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(350))
-                flashChar = nil
-            }
-        }
         .onReceive(session.$incomingMorse) { msg in
-            // Replay inbound Morse as beeps + optional flash. Chat messages
-            // don't populate this publisher, so this only fires for Morse.
+            // Arriving Morse packets still auto-play as beeps / flash,
+            // independent of whether the local "send as Morse" toggle
+            // is on — receipt is about what the sender intended.
             guard let msg, !msg.isEmpty else { return }
             let frames = MorseCode.encode(msg)
             tone.play(frames, wpm: wpm)
@@ -97,8 +69,20 @@ struct ChatView: View {
         .onDisappear {
             tone.stop()
             beacon.stop()
-            commitTimer?.cancel()
-            tapThresholdTask?.cancel()
+        }
+        .sheet(isPresented: $showingListen) {
+            ListenView(onCharacter: { char in
+                decodedBuffer.append(char)
+            })
+            .onDisappear {
+                // On close, commit the decoded buffer as a received
+                // morse entry so it joins the normal RX scroll.
+                let trimmed = decodedBuffer.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty {
+                    session.appendDecodedMorse(trimmed)
+                }
+                decodedBuffer.removeAll()
+            }
         }
     }
 
@@ -106,14 +90,11 @@ struct ChatView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Button {
-                dismiss()
-            } label: {
+            Button { dismiss() } label: {
                 Text("◂ BACK")
                     .walkieLabel(11)
                     .foregroundStyle(DT.info)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10).padding(.vertical, 6)
                     .overlay(Rectangle().strokeBorder(DT.info.opacity(0.6), lineWidth: 1))
             }
             .buttonStyle(.plain)
@@ -126,85 +107,53 @@ struct ChatView: View {
 
             Spacer()
 
-            // WPM stepper is Morse-specific — collapse entirely in CHAT mode
-            // rather than showing a disabled control.
-            if screenMode == .morse {
+            Button { showingListen = true } label: {
                 HStack(spacing: 4) {
-                    Text("WPM")
-                        .walkieLabel(10)
-                        .foregroundStyle(DT.textDim)
-                    Stepper(value: $wpm, in: 5...30) {
-                        Text("\(wpm)")
-                            .font(DT.mono(12, weight: .bold))
-                            .foregroundStyle(DT.text)
-                    }
-                    .labelsHidden()
+                    Image(systemName: "ear.fill")
+                    Text("LISTEN").walkieLabel(10)
                 }
+                .foregroundStyle(DT.sys)
+                .padding(.horizontal, 10).padding(.vertical, 6)
+                .overlay(Rectangle().strokeBorder(DT.sys.opacity(0.6), lineWidth: 1))
             }
+            .buttonStyle(.plain)
 
-            Button("CLEAR") {
-                if screenMode == .chat { chatDraft.removeAll() }
-                else { tree.clear() }
-            }
+            Button("CLEAR") { draft.removeAll() }
                 .font(DT.mono(10, weight: .bold))
                 .tracking(DT.labelTracking)
                 .foregroundStyle(DT.warn)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 10).padding(.vertical, 6)
                 .overlay(Rectangle().strokeBorder(DT.warn.opacity(0.6), lineWidth: 1))
                 .buttonStyle(.plain)
         }
     }
 
-    // MARK: - Mode toggle (CHAT / MORSE)
-
-    private var screenModeToggle: some View {
-        HStack(spacing: 6) {
-            screenModePill("CHAT", active: screenMode == .chat) {
-                screenModeRaw = ScreenMode.chat.rawValue
-                // Tree buffer is stale when moving back to Chat; clear
-                // it so returning to Morse starts fresh.
-                tree.clear()
-            }
-            screenModePill("MORSE", active: screenMode == .morse) {
-                screenModeRaw = ScreenMode.morse.rawValue
-                chatFieldFocused = false
-            }
-            Spacer()
-        }
-    }
-
-    private func screenModePill(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .walkieLabel(10)
-                .foregroundStyle(active ? DT.bg : DT.textDim)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(active ? DT.sys : .clear)
-                .overlay(Rectangle().strokeBorder(active ? DT.sys : DT.border, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - RX scroll (shared)
+    // MARK: - RX scroll
 
     private var rxScroll: some View {
         TerminalFrame("RX") {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 3) {
-                    ForEach(session.textHistory) { entry in
-                        rxRow(entry)
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(session.textHistory) { entry in
+                            rxRow(entry)
+                                .id(entry.id)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .onChange(of: session.textHistory.count) { _ in
+                    // Autoscroll to the newest row so incoming messages
+                    // don't get buried off-screen.
+                    if let last = session.textHistory.last {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        // CHAT mode gives RX more vertical room since there's no tree
-        // below it; MORSE mode keeps it compact to leave room for the
-        // tree canvas.
-        .frame(height: screenMode == .chat ? 260 : 72)
-        .animation(.easeOut(duration: 0.15), value: screenMode)
+        .frame(maxHeight: .infinity)
         .accessibilityLabel("Received messages")
     }
 
@@ -228,14 +177,8 @@ struct ChatView: View {
         .accessibilityValue(entry.text)
     }
 
-    /// Small status glyph shown at the end of outgoing rows whose delivery
-    /// is being tracked (mesh only). Incoming rows and non-mesh sends get
-    /// nothing — no need for a green ✓ on every WiFi message.
     @ViewBuilder
     private func deliveryGlyph(for entry: TextEntry) -> some View {
-        // Reading `tracker.stateVersion` here is enough for SwiftUI to
-        // re-render this row when delivery state changes — the tracker
-        // is `@ObservedObject` above so `stateVersion` bumps propagate.
         let _ = tracker.stateVersion
         if !entry.isIncoming, let state = tracker.state(entryId: entry.id) {
             switch state {
@@ -248,294 +191,145 @@ struct ChatView: View {
         }
     }
 
-    // MARK: - CHAT mode
+    // MARK: - Preset chips
 
-    private var chatComposer: some View {
-        VStack(spacing: 8) {
+    private var presetChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(Self.presetGroups.indices, id: \.self) { idx in
+                    let group = Self.presetGroups[idx]
+                    ForEach(group, id: \.self) { phrase in
+                        chip(phrase)
+                    }
+                    if idx < Self.presetGroups.count - 1 {
+                        // Thin separator between semantic groups
+                        // (emergency / everyday / status).
+                        Rectangle()
+                            .fill(DT.border)
+                            .frame(width: 1, height: 20)
+                            .padding(.horizontal, 4)
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .frame(height: 34)
+    }
+
+    private func chip(_ phrase: String) -> some View {
+        Button { insert(phrase) } label: {
+            Text(phrase)
+                .walkieLabel(10)
+                .foregroundStyle(DT.text)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(DT.panel)
+                .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func insert(_ phrase: String) {
+        if draft.isEmpty {
+            draft = phrase
+        } else if draft.hasSuffix(" ") {
+            draft.append(phrase)
+        } else {
+            draft.append(" \(phrase)")
+        }
+    }
+
+    // MARK: - Composer
+
+    private var composer: some View {
+        HStack(spacing: 8) {
             TerminalFrame("TX") {
-                TextField("", text: $chatDraft, axis: .vertical)
+                TextField("", text: $draft, axis: .vertical)
                     .font(DT.mono(13, weight: .semibold))
                     .foregroundStyle(DT.text)
                     .tint(DT.ok)
-                    .lineLimit(1...4)
-                    .focused($chatFieldFocused)
+                    .lineLimit(1...3)
+                    .focused($composerFocused)
                     .submitLabel(.send)
-                    .onSubmit(sendChat)
+                    .onSubmit(send)
             }
             .frame(minHeight: 44)
 
-            HStack(spacing: 8) {
-                Spacer()
-                txButton(label: "SEND", enabled: canSendChat, action: sendChat)
-                    .frame(width: 120, height: 44)
-            }
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Chat composer")
-    }
-
-    private func sendChat() {
-        let text = chatDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        session.sendChat(text)
-        chatDraft.removeAll()
-    }
-
-    // MARK: - MORSE mode
-
-    private var morseSection: some View {
-        VStack(spacing: 10) {
-            TerminalFrame("TX") {
-                Text(tree.buffer.isEmpty ? "_" : tree.buffer + "_")
-                    .font(DT.mono(14, weight: .bold))
-                    .foregroundStyle(tree.isOffTree ? DT.tx : DT.ok)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineLimit(1)
-                    .truncationMode(.head)
-            }
-            .frame(height: 42)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Outgoing Morse")
-            .accessibilityValue(tree.buffer.isEmpty ? "empty" : tree.buffer)
-            .accessibilityAddTraits(.updatesFrequently)
-
-            TerminalFrame("TREE") {
-                MorseTreeView(tree: tree, flashChar: flashChar)
-            }
-            .frame(maxHeight: .infinity)
-
-            inputRow
-            modeRow
-        }
-    }
-
-    private var inputRow: some View {
-        Group {
-            if inputMode == .key { keyModeRow } else { tapModeRow }
-        }
-    }
-
-    private var keyModeRow: some View {
-        HStack(spacing: 8) {
-            morseButton(label: "·", color: DT.info, accessibilityLabel: "dit", action: handleDit)
-            controlButton(label: "⌫", color: DT.warn, accessibilityLabel: "backspace") {
-                if tree.currentPath.isEmpty { tree.deleteLastCharacter() }
-                else { tree.undoStep() }
-            }
-            controlButton(label: "␣", color: DT.textDim, accessibilityLabel: "word gap") {
-                armCommit(cancel: true)
-                tree.addWordGap()
-            }
-            morseButton(label: "−", color: DT.info, accessibilityLabel: "dah", action: handleDah)
-            txButton(label: "TX", enabled: canSendMorse, action: sendMorse)
-                .frame(width: 80)
-        }
-        .frame(height: 64)
-    }
-
-    private var tapModeRow: some View {
-        HStack(spacing: 8) {
-            controlButton(label: "⌫", color: DT.warn, accessibilityLabel: "backspace") {
-                if tree.currentPath.isEmpty { tree.deleteLastCharacter() }
-                else { tree.undoStep() }
-            }
-            controlButton(label: "␣", color: DT.textDim, accessibilityLabel: "word gap") {
-                armCommit(cancel: true)
-                tree.addWordGap()
-            }
-            tapKey
-            txButton(label: "TX", enabled: canSendMorse, action: sendMorse)
-                .frame(width: 80)
-        }
-        .frame(height: 64)
-    }
-
-    private var tapKey: some View {
-        let (label, accent): (String, Color) = {
-            guard tapDownAt != nil else { return ("KEY", DT.info) }
-            return tapCrossedDah ? ("DAH", DT.ok) : ("DIT", DT.warn)
-        }()
-        return Rectangle()
-            .fill(tapDownAt == nil ? DT.panel : accent.opacity(0.25))
-            .overlay(Rectangle().strokeBorder(accent, lineWidth: 1))
-            .overlay(
-                Text(label)
+            Button(action: send) {
+                Text("SEND")
                     .walkieLabel(12, weight: .heavy, tracking: 2)
-                    .foregroundStyle(accent)
-            )
-            .frame(maxWidth: .infinity)
-            .animation(.easeOut(duration: 0.08), value: tapCrossedDah)
-            .animation(.easeOut(duration: 0.08), value: tapDownAt)
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        if tapDownAt == nil { tapStart() }
-                    }
-                    .onEnded { _ in tapEnd() }
-            )
-            .accessibilityLabel("Morse key")
-            .accessibilityHint("Short press for dit, long press for dah")
+                    .foregroundStyle(canSend ? DT.bg : DT.textFaint)
+                    .frame(width: 80, height: 44)
+                    .background(canSend ? DT.ok : DT.panel)
+                    .overlay(Rectangle().strokeBorder(canSend ? DT.ok : DT.border, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSend)
+            .accessibilityLabel("Send")
+        }
     }
 
-    private var modeRow: some View {
-        HStack(spacing: 6) {
-            modePill("KEY", active: inputMode == .key) {
-                inputModeRaw = MorseInputMode.key.rawValue
-            }
-            modePill("TAP", active: inputMode == .tap) {
-                inputModeRaw = MorseInputMode.tap.rawValue
-            }
-            Spacer()
-            Toggle(isOn: $flashEnabled) {
-                Text("FLASH")
+    // MARK: - Morse controls
+
+    private var morseControls: some View {
+        HStack(spacing: 10) {
+            Toggle(isOn: $sendAsMorse) {
+                Text("SEND AS MORSE")
                     .walkieLabel(10)
-                    .foregroundStyle(beacon.isAvailable ? DT.text : DT.textFaint)
+                    .foregroundStyle(DT.text)
             }
             .toggleStyle(.switch)
-            .tint(DT.tx)
-            .disabled(!beacon.isAvailable)
+            .tint(DT.sys)
             .fixedSize()
+
+            if sendAsMorse {
+                HStack(spacing: 4) {
+                    Text("WPM")
+                        .walkieLabel(10)
+                        .foregroundStyle(DT.textDim)
+                    Stepper(value: $wpm, in: 5...30) {
+                        Text("\(wpm)")
+                            .font(DT.mono(12, weight: .bold))
+                            .foregroundStyle(DT.text)
+                    }
+                    .labelsHidden()
+                }
+
+                Toggle(isOn: $flashEnabled) {
+                    Text("FLASH")
+                        .walkieLabel(10)
+                        .foregroundStyle(beacon.isAvailable ? DT.text : DT.textFaint)
+                }
+                .toggleStyle(.switch)
+                .tint(DT.tx)
+                .disabled(!beacon.isAvailable)
+                .fixedSize()
+            }
+
+            Spacer()
         }
+        .animation(.easeOut(duration: 0.15), value: sendAsMorse)
     }
 
-    private func modePill(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .walkieLabel(10)
-                .foregroundStyle(active ? DT.bg : DT.textDim)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(active ? DT.info : .clear)
-                .overlay(Rectangle().strokeBorder(active ? DT.info : DT.border, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
+    // MARK: - Send
 
-    // MARK: - Shared buttons
-
-    private func morseButton(label: String, color: Color, accessibilityLabel: String,
-                             action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 28, weight: .bold, design: .monospaced))
-                .foregroundStyle(color)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(DT.panel)
-                .overlay(Rectangle().strokeBorder(color, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private func controlButton(label: String, color: Color, accessibilityLabel: String,
-                               action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                .foregroundStyle(color)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(DT.panel)
-                .overlay(Rectangle().strokeBorder(color.opacity(0.6), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .frame(width: 56)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private func txButton(label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .walkieLabel(13, weight: .heavy, tracking: 3)
-                .foregroundStyle(enabled ? DT.bg : DT.textFaint)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(enabled ? DT.ok : DT.panel)
-                .overlay(Rectangle().strokeBorder(enabled ? DT.ok : DT.border, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .accessibilityLabel("Transmit")
-        .accessibilityHint("Sends the outgoing message to the selected peer")
-    }
-
-    // MARK: - Enable gates
-
-    private var canSendMorse: Bool {
+    private var canSend: Bool {
         session.isRunning && session.isPaired && session.selectedPeer != nil &&
-            !tree.buffer.trimmingCharacters(in: .whitespaces).isEmpty
+            !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var canSendChat: Bool {
-        session.isRunning && session.isPaired && session.selectedPeer != nil &&
-            !chatDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var inputMode: MorseInputMode {
-        MorseInputMode(rawValue: inputModeRaw) ?? .key
-    }
-
-    // MARK: - Morse interactions
-
-    private func handleDit() {
-        tree.step(.dit)
-        armCommit(cancel: false)
-    }
-
-    private func handleDah() {
-        tree.step(.dah)
-        armCommit(cancel: false)
-    }
-
-    private func armCommit(cancel: Bool) {
-        commitTimer?.cancel()
-        if cancel { return }
-        commitTimer = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(autoCommitMs))
-            guard !Task.isCancelled else { return }
-            tree.commit()
-        }
-    }
-
-    private func tapStart() {
-        tapDownAt = Date()
-        tapCrossedDah = false
-        let threshold = tapDahThreshold
-        tapThresholdTask?.cancel()
-        tapThresholdTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(threshold))
-            guard !Task.isCancelled else { return }
-            tapCrossedDah = true
-        }
-    }
-
-    private func tapEnd() {
-        tapThresholdTask?.cancel()
-        tapThresholdTask = nil
-        guard let start = tapDownAt else { return }
-        let held = Date().timeIntervalSince(start)
-        tapDownAt = nil
-        tapCrossedDah = false
-        if held >= tapDahThreshold { handleDah() } else { handleDit() }
-    }
-
-    private func sendMorse() {
-        if !tree.currentPath.isEmpty { tree.commit() }
-        let text = tree.buffer.trimmingCharacters(in: .whitespaces)
+    private func send() {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        session.sendMorse(text)
-        tone.play(MorseCode.encode(text), wpm: wpm)
-        if flashEnabled { beacon.play(MorseCode.encode(text), wpm: wpm) }
-        tree.clear()
-    }
-
-    // MARK: - Mode enums
-
-    enum ScreenMode: String {
-        case chat
-        case morse
-    }
-
-    enum MorseInputMode: String {
-        case key
-        case tap
+        if sendAsMorse {
+            session.sendMorse(text)
+            // Local playback so the sender hears / sees what they sent.
+            let frames = MorseCode.encode(text)
+            tone.play(frames, wpm: wpm)
+            if flashEnabled { beacon.play(frames, wpm: wpm) }
+        } else {
+            session.sendChat(text)
+        }
+        draft.removeAll()
     }
 }

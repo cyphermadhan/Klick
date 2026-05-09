@@ -33,7 +33,7 @@
 		<string>_klick-ptt-v1._udp.</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Used to scan pairing QR codes.</string>
+	<string>Used to scan pairing QR codes and to read Morse code carried by another phone's flashlight.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Used to discover and communicate with nearby devices.</string>
 	<key>NSMicrophoneUsageDescription</key>

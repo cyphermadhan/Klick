@@ -89,7 +89,7 @@ targets:
           UIColorName: ""
         NSMicrophoneUsageDescription: Used for push-to-talk voice communication.
         NSLocalNetworkUsageDescription: Used to discover and communicate with nearby devices.
-        NSCameraUsageDescription: Used to scan pairing QR codes.
+        NSCameraUsageDescription: Used to scan pairing QR codes and to read Morse code carried by another phone's flashlight.
         # Bluetooth is required by MultipeerConnectivity (the "Nearby" transport)
         # and by the Meshtastic LoRa radio pair flow (the "Mesh" transport).
         # iOS will surface this string in the permission prompt the first

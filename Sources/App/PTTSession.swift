@@ -286,6 +286,15 @@ final class PTTSession: ObservableObject {
         }
     }
 
+    /// Push text decoded from the `ListenView` (camera or audio) into
+    /// the RX scroll as an incoming Morse entry. Doesn't touch the
+    /// network — it's purely a local receive from a sensor.
+    func appendDecodedMorse(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        appendText(TextEntry(text: trimmed, kind: .morse, isIncoming: true))
+    }
+
     private func appendText(_ entry: TextEntry) {
         textHistory.append(entry)
         if textHistory.count > Self.textHistoryLimit {
