@@ -45,12 +45,17 @@ struct ChatView: View {
         ZStack {
             DT.bg.ignoresSafeArea()
 
+            // Explicit order: the SEND button lives at the bottom
+            // regardless of what else is on screen. Morse controls sit
+            // in a compact row that appears/disappears in-place above
+            // it so nothing shifts off the bottom of the viewport.
             VStack(spacing: 10) {
                 header
                 rxScroll
                 presetChips
                 composer
                 morseControls
+                sendButton
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -88,16 +93,14 @@ struct ChatView: View {
 
     // MARK: - Header
 
+    /// Standard height for every header pill. Picked to match the
+    /// LISTEN (icon + text) button so label-only pills don't render
+    /// any shorter.
+    private static let headerButtonHeight: CGFloat = 32
+
     private var header: some View {
         HStack(spacing: 8) {
-            Button { dismiss() } label: {
-                Text("◂ BACK")
-                    .walkieLabel(11)
-                    .foregroundStyle(DT.info)
-                    .padding(.horizontal, 10).padding(.vertical, 6)
-                    .overlay(Rectangle().strokeBorder(DT.info.opacity(0.6), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
+            headerPill(title: "◂ BACK", accent: DT.info) { dismiss() }
 
             Spacer()
 
@@ -107,25 +110,34 @@ struct ChatView: View {
 
             Spacer()
 
-            Button { showingListen = true } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "ear.fill")
-                    Text("LISTEN").walkieLabel(10)
-                }
-                .foregroundStyle(DT.sys)
-                .padding(.horizontal, 10).padding(.vertical, 6)
-                .overlay(Rectangle().strokeBorder(DT.sys.opacity(0.6), lineWidth: 1))
+            headerPill(title: "LISTEN", icon: "ear.fill", accent: DT.sys) {
+                showingListen = true
             }
-            .buttonStyle(.plain)
 
-            Button("CLEAR") { draft.removeAll() }
-                .font(DT.mono(10, weight: .bold))
-                .tracking(DT.labelTracking)
-                .foregroundStyle(DT.warn)
-                .padding(.horizontal, 10).padding(.vertical, 6)
-                .overlay(Rectangle().strokeBorder(DT.warn.opacity(0.6), lineWidth: 1))
-                .buttonStyle(.plain)
+            headerPill(title: "CLEAR", accent: DT.warn) {
+                draft.removeAll()
+            }
         }
+    }
+
+    /// One header button, uniform height across icon + text and
+    /// text-only variants.
+    private func headerPill(title: String, icon: String? = nil,
+                            accent: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .bold))
+                }
+                Text(title).walkieLabel(10)
+            }
+            .foregroundStyle(accent)
+            .padding(.horizontal, 10)
+            .frame(height: Self.headerButtonHeight)
+            .overlay(Rectangle().strokeBorder(accent.opacity(0.6), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - RX scroll
@@ -241,74 +253,118 @@ struct ChatView: View {
 
     // MARK: - Composer
 
+    /// Text field for the outgoing message. Lives above the morse
+    /// controls and the full-width SEND button — that layout keeps the
+    /// SEND target at the bottom edge of the screen regardless of what
+    /// else is toggled.
     private var composer: some View {
-        HStack(spacing: 8) {
-            TerminalFrame("TX") {
-                TextField("", text: $draft, axis: .vertical)
-                    .font(DT.mono(13, weight: .semibold))
-                    .foregroundStyle(DT.text)
-                    .tint(DT.ok)
-                    .lineLimit(1...3)
-                    .focused($composerFocused)
-                    .submitLabel(.send)
-                    .onSubmit(send)
-            }
-            .frame(minHeight: 44)
-
-            Button(action: send) {
-                Text("SEND")
-                    .walkieLabel(12, weight: .heavy, tracking: 2)
-                    .foregroundStyle(canSend ? DT.bg : DT.textFaint)
-                    .frame(width: 80, height: 44)
-                    .background(canSend ? DT.ok : DT.panel)
-                    .overlay(Rectangle().strokeBorder(canSend ? DT.ok : DT.border, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .disabled(!canSend)
-            .accessibilityLabel("Send")
+        TerminalFrame("TX") {
+            TextField("", text: $draft, axis: .vertical)
+                .font(DT.mono(13, weight: .semibold))
+                .foregroundStyle(DT.text)
+                .tint(DT.ok)
+                .lineLimit(1...3)
+                .focused($composerFocused)
+                .submitLabel(.send)
+                .onSubmit(send)
         }
+        .frame(minHeight: 44)
     }
 
     // MARK: - Morse controls
 
+    /// Compact row containing the "SEND AS MORSE" switch and, when on,
+    /// the WPM rocker + FLASH toggle. Laid out so nothing can overflow
+    /// horizontally on iPhone SE: each control is `.fixedSize` and sits
+    /// inside a horizontal ScrollView as an escape hatch.
     private var morseControls: some View {
-        HStack(spacing: 10) {
-            Toggle(isOn: $sendAsMorse) {
-                Text("SEND AS MORSE")
-                    .walkieLabel(10)
-                    .foregroundStyle(DT.text)
-            }
-            .toggleStyle(.switch)
-            .tint(DT.sys)
-            .fixedSize()
-
-            if sendAsMorse {
-                HStack(spacing: 4) {
-                    Text("WPM")
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 14) {
+                Toggle(isOn: $sendAsMorse) {
+                    Text("SEND AS MORSE")
                         .walkieLabel(10)
-                        .foregroundStyle(DT.textDim)
-                    Stepper(value: $wpm, in: 5...30) {
-                        Text("\(wpm)")
-                            .font(DT.mono(12, weight: .bold))
-                            .foregroundStyle(DT.text)
-                    }
-                    .labelsHidden()
-                }
-
-                Toggle(isOn: $flashEnabled) {
-                    Text("FLASH")
-                        .walkieLabel(10)
-                        .foregroundStyle(beacon.isAvailable ? DT.text : DT.textFaint)
+                        .foregroundStyle(DT.text)
                 }
                 .toggleStyle(.switch)
-                .tint(DT.tx)
-                .disabled(!beacon.isAvailable)
+                .tint(DT.sys)
                 .fixedSize()
-            }
 
-            Spacer()
+                if sendAsMorse {
+                    wpmControl
+                    flashToggle
+                }
+            }
+            .padding(.horizontal, 2)
         }
+        .frame(height: 36)
         .animation(.easeOut(duration: 0.15), value: sendAsMorse)
+    }
+
+    /// Explicit "−  WPM 12  +" rocker. Replaces the earlier `Stepper`
+    /// whose loose +/- buttons read like two mystery controls next to
+    /// the morse toggle. Here the label's welded between the arrows so
+    /// it's obvious what they adjust.
+    private var wpmControl: some View {
+        HStack(spacing: 0) {
+            wpmStepButton(symbol: "minus", enabled: wpm > 5) {
+                if wpm > 5 { wpm -= 1 }
+            }
+            Text("WPM \(wpm)")
+                .font(DT.mono(11, weight: .bold))
+                .foregroundStyle(DT.text)
+                .frame(minWidth: 58)
+                .frame(height: 32)
+                .background(DT.panel)
+            wpmStepButton(symbol: "plus", enabled: wpm < 30) {
+                if wpm < 30 { wpm += 1 }
+            }
+        }
+        .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
+    }
+
+    private func wpmStepButton(symbol: String, enabled: Bool,
+                               action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(enabled ? DT.info : DT.textFaint)
+                .frame(width: 28, height: 32)
+                .background(DT.panel)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(symbol == "plus" ? "Increase WPM" : "Decrease WPM")
+    }
+
+    private var flashToggle: some View {
+        Toggle(isOn: $flashEnabled) {
+            Text("FLASH")
+                .walkieLabel(10)
+                .foregroundStyle(beacon.isAvailable ? DT.text : DT.textFaint)
+        }
+        .toggleStyle(.switch)
+        .tint(DT.tx)
+        .disabled(!beacon.isAvailable)
+        .fixedSize()
+    }
+
+    // MARK: - Send button
+
+    /// Full-width send bar. Always at the bottom of the screen so
+    /// toggling any morse controls never pushes it off-screen.
+    private var sendButton: some View {
+        Button(action: send) {
+            Text(sendAsMorse ? "SEND AS MORSE" : "SEND")
+                .walkieLabel(13, weight: .heavy, tracking: 3)
+                .foregroundStyle(canSend ? DT.bg : DT.textFaint)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(canSend ? (sendAsMorse ? DT.sys : DT.ok) : DT.panel)
+                .overlay(Rectangle().strokeBorder(canSend ? (sendAsMorse ? DT.sys : DT.ok) : DT.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSend)
+        .accessibilityLabel(sendAsMorse ? "Send as Morse" : "Send")
     }
 
     // MARK: - Send

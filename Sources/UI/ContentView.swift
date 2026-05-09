@@ -115,7 +115,7 @@ struct ContentView: View {
                 Spacer()
                 headerButton("PAIR") { showingPairing = true }
                 headerButton("CHAT", accent: DT.sys) { showingChat = true }
-                headerButton("SYS") { showingSettings = true }
+                headerButton("SETTINGS") { showingSettings = true }
                 headerButton(session.isRunning ? "STOP" : "START",
                              accent: session.isRunning ? DT.warn : DT.ok) {
                     if session.isRunning { session.stop() }

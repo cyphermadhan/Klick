@@ -25,11 +25,17 @@ final class AudioToneDecoder: NSObject, ObservableObject {
     private let demod = MorseDemodulator()
     private let log = Logger(subsystem: "world.madhans.klick", category: "ToneDecoder")
 
-    /// 20 ms window at 48 kHz — same granularity as Opus frames, fine
-    /// enough for reliable pulse classification at typical WPM.
-    private static let windowSamples: Int = 960
-    private static let sampleRate: Double = 48_000
+    /// Target 20 ms window — same granularity as Opus frames, fine
+    /// enough for reliable pulse classification at typical WPM. Actual
+    /// window size is computed from the hardware's real sample rate
+    /// at start (48 kHz on iPhone, 44.1 kHz on some macs).
+    private static let windowMs: Double = 20
     private static let toneHz: Double = MorseTone.defaultFrequency
+
+    /// Hardware sample rate captured once at start. Used to size the
+    /// Goertzel window and recompute the filter coefficient.
+    private var sampleRate: Double = 48_000
+    private var windowSamples: Int = 960
 
     /// Rolling noise estimate. Threshold floats above this so a loud
     /// room doesn't blind the detector.
@@ -37,10 +43,10 @@ final class AudioToneDecoder: NSObject, ObservableObject {
     private var onThreshold: Double { noiseFloor * 8 + 0.005 }
     private var offThreshold: Double { noiseFloor * 4 + 0.002 }
 
-    /// Pre-computed Goertzel coefficient for our target frequency.
-    /// 2·cos(2π·f/Fs).
-    private let goertzelCoeff: Double =
-        2.0 * cos(2.0 * .pi * AudioToneDecoder.toneHz / AudioToneDecoder.sampleRate)
+    /// Goertzel coefficient = 2·cos(2π·f/Fs). Recomputed when we learn
+    /// the hardware's real sample rate at start.
+    private var goertzelCoeff: Double =
+        2.0 * cos(2.0 * .pi * AudioToneDecoder.toneHz / 48_000)
 
     private var tickTimer: Timer?
     /// Accumulator for partial windows when the tap buffer length
@@ -52,7 +58,7 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         demod.onCharacter = { [weak self] char in
             self?.onCharacter?(char)
         }
-        windowBuffer.reserveCapacity(Self.windowSamples * 2)
+        windowBuffer.reserveCapacity(4096) // generous upper bound
     }
 
     func start() async {
@@ -76,8 +82,28 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         }
 
         let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+        // `inputNode.outputFormat(forBus:0)` can return a zeroed-out
+        // format before the session is fully up — installing a tap with
+        // that throws "required condition is false: format.sampleRate != 0"
+        // and crashes. Use the hardware's actual input format, falling
+        // back to nil (which tells AVAudioEngine to pick for itself).
+        let hwFormat = input.inputFormat(forBus: 0)
+        let tapFormat: AVAudioFormat? = hwFormat.sampleRate > 0 ? hwFormat : nil
+        if tapFormat == nil {
+            log.error("Audio input format unavailable; aborting listen")
+            return
+        }
+        // Capture the real sample rate, recompute Goertzel coefficient
+        // and window size. Otherwise a 44.1 kHz hardware tap against a
+        // 48 kHz-tuned filter would miss the 600 Hz tone entirely.
+        sampleRate = hwFormat.sampleRate
+        windowSamples = max(64, Int(sampleRate * Self.windowMs / 1000))
+        goertzelCoeff = 2.0 * cos(2.0 * .pi * Self.toneHz / sampleRate)
+
+        // Defensive remove in case a prior start() left a tap behind
+        // (can happen if engine.start threw after installTap succeeded).
+        input.removeTap(onBus: 0)
+        input.installTap(onBus: 0, bufferSize: 1024, format: tapFormat) { [weak self] buffer, _ in
             self?.processBuffer(buffer)
         }
         do {
@@ -134,9 +160,9 @@ final class AudioToneDecoder: NSObject, ObservableObject {
 
     private func appendAndEvaluate(_ newSamples: [Float]) {
         windowBuffer.append(contentsOf: newSamples)
-        while windowBuffer.count >= Self.windowSamples {
-            let window = Array(windowBuffer.prefix(Self.windowSamples))
-            windowBuffer.removeFirst(Self.windowSamples)
+        while windowBuffer.count >= windowSamples {
+            let window = Array(windowBuffer.prefix(windowSamples))
+            windowBuffer.removeFirst(windowSamples)
             let power = goertzelPower(window)
             currentLevel = min(1.0, power * 4) // scale for display
             updateNoiseFloor(power)
