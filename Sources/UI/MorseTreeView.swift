@@ -9,11 +9,13 @@ import SwiftUI
 ///   - right branch = dit step → **circle** node
 ///   - root = antenna glyph
 ///
-/// Letters (max depth 4) are rendered with their label. Digits and
-/// punctuation (depth 5–6) are still reachable via keying and show up as
-/// the active path highlight, but we don't paint the full sub-tree — the
-/// density past depth 4 doesn't fit on an iPhone screen without scrolling,
-/// and this keeps the reference tree legible.
+/// Nodes are drawn for every defined ITU character (depths 1–6). Letters
+/// (depths 1–4) render full-size with a 9 pt label. Digits (depth 5) drop
+/// to 14 pt markers with a 7 pt label since horizontal spacing halves each
+/// level. Punctuation (depth 6) is too tight for text on a phone, so those
+/// nodes are label-less 10 pt markers — the live path still highlights the
+/// exact terminal so users can see where they are, and the composed
+/// character appears in the `currentLetter` readout next to the tree.
 struct MorseTreeView: View {
     @ObservedObject var tree: MorseTree
     /// Character that should briefly glow orange. The parent sets this
@@ -21,10 +23,27 @@ struct MorseTreeView: View {
     /// a short delay — matching the keychain's "A" flash state.
     var flashChar: Character?
 
-    /// Letters max out at depth 4 of the ITU tree. Past this we stop
-    /// drawing the ghost tree, but the live path still animates into the
-    /// empty space below for punctuation-length inputs.
-    private let labelledDepth = 4
+    /// Max depth we lay out vertically. ITU punctuation tops out at 6.
+    private let maxDepth = 6
+
+    /// Per-depth visual tuning. Node size shrinks so deep branches fit
+    /// without overlapping their siblings; the label font shrinks in
+    /// tandem, dropping to zero (no label) at depth 6.
+    private func nodeSide(for depth: Int) -> CGFloat {
+        switch depth {
+        case ...4:  return 18
+        case 5:     return 14
+        default:    return 10
+        }
+    }
+
+    private func labelSize(for depth: Int) -> CGFloat? {
+        switch depth {
+        case ...4:  return 9
+        case 5:     return 7
+        default:    return nil
+        }
+    }
 
     var body: some View {
         Canvas { ctx, size in
@@ -39,21 +58,28 @@ struct MorseTreeView: View {
     // MARK: - Drawing
 
     private func draw(ctx: GraphicsContext, size: CGSize) {
-        let rowHeight = size.height / CGFloat(labelledDepth + 1)
+        let rowHeight = size.height / CGFloat(maxDepth + 1)
         drawGhostTree(ctx: ctx, size: size, rowHeight: rowHeight)
         drawActivePath(ctx: ctx, size: size, rowHeight: rowHeight)
         drawRoot(ctx: ctx, rowHeight: rowHeight, size: size)
     }
 
-    /// Dim reference drawing of every letter — the "keychain" layer.
+    /// Dim reference drawing of every defined character — the "keychain"
+    /// layer. Letters get full labels; digits get smaller labels;
+    /// punctuation is label-less markers.
     private func drawGhostTree(ctx: GraphicsContext, size: CGSize, rowHeight: CGFloat) {
         let rootCenter = CGPoint(x: size.width / 2, y: rowHeight / 2)
 
-        for (char, path) in MorseCode.alphabet where path.count <= labelledDepth {
+        // Draw shallower paths first so deeper nodes overlap them cleanly.
+        let sortedEntries = MorseCode.alphabet.sorted { $0.value.count < $1.value.count }
+
+        for (char, path) in sortedEntries where !path.isEmpty {
+            let depth = path.count
+
             // Edges: parent → child, drawn incrementally so overlapping
             // trunks don't require a separate "visited" set.
             var from = rootCenter
-            for i in 0..<path.count {
+            for i in 0..<depth {
                 let to = position(for: Array(path.prefix(i + 1)), size: size, rowHeight: rowHeight)
                 var line = Path()
                 line.move(to: from)
@@ -63,12 +89,16 @@ struct MorseTreeView: View {
             }
 
             let p = position(for: path, size: size, rowHeight: rowHeight)
-            drawNodeShape(ctx: ctx, at: p, last: path.last, color: nodeColor(for: char),
-                          filled: flashChar == char, side: 18)
-            let label = Text(String(char))
-                .font(DT.mono(9, weight: .bold))
-                .foregroundColor(flashChar == char ? DT.warn : DT.textDim)
-            ctx.draw(label, at: p)
+            drawNodeShape(ctx: ctx, at: p, last: path.last,
+                          color: nodeColor(for: char),
+                          filled: flashChar == char,
+                          side: nodeSide(for: depth))
+            if let fontSize = labelSize(for: depth) {
+                let label = Text(String(char))
+                    .font(DT.mono(fontSize, weight: .bold))
+                    .foregroundColor(flashChar == char ? DT.warn : DT.textDim)
+                ctx.draw(label, at: p)
+            }
         }
     }
 
@@ -88,13 +118,17 @@ struct MorseTreeView: View {
             from = to
         }
 
-        // Emphasize the terminal (currently-keyed) node.
+        // Emphasize the terminal (currently-keyed) node. Slightly larger
+        // than the ghost node at that depth so it reads as "this is where
+        // you are" even on the tight depth-6 layer.
+        let depth = tree.currentPath.count
+        let terminalSide = nodeSide(for: depth) + 4
         let terminal = position(for: tree.currentPath, size: size, rowHeight: rowHeight)
         drawNodeShape(ctx: ctx, at: terminal, last: tree.currentPath.last,
-                      color: color, filled: true, side: 22)
+                      color: color, filled: true, side: terminalSide)
         if let char = tree.currentLetter {
             let label = Text(String(char))
-                .font(DT.mono(11, weight: .heavy))
+                .font(DT.mono(depth <= 4 ? 11 : 9, weight: .heavy))
                 .foregroundColor(color)
             ctx.draw(label, at: terminal)
         }

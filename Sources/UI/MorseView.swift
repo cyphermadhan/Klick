@@ -144,6 +144,13 @@ struct MorseView: View {
                     .truncationMode(.head)
             }
             .frame(height: 42)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Outgoing message")
+            .accessibilityValue(tree.buffer.isEmpty ? "empty" : tree.buffer)
+            // VoiceOver should re-announce the value as letters commit —
+            // keyers who rely on speech need live feedback, not "press to
+            // explore the tree".
+            .accessibilityAddTraits(.updatesFrequently)
 
             TerminalFrame("RX") {
                 ScrollView(.vertical, showsIndicators: false) {
@@ -156,12 +163,16 @@ struct MorseView: View {
                                     .foregroundStyle(DT.text)
                             }
                             .font(DT.mono(11))
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(entry.isIncoming ? "Received" : "Sent")
+                            .accessibilityValue(entry.text)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .frame(height: 72)
+            .accessibilityLabel("Received messages")
         }
     }
 
@@ -179,20 +190,16 @@ struct MorseView: View {
 
     private var keyModeRow: some View {
         HStack(spacing: 8) {
-            morseButton(label: "·", color: DT.info) {
-                handleDit()
-            }
-            controlButton(label: "⌫", color: DT.warn) {
+            morseButton(label: "·", color: DT.info, accessibilityLabel: "dit", action: handleDit)
+            controlButton(label: "⌫", color: DT.warn, accessibilityLabel: "backspace") {
                 if tree.currentPath.isEmpty { tree.deleteLastCharacter() }
                 else { tree.undoStep() }
             }
-            controlButton(label: "␣", color: DT.textDim) {
+            controlButton(label: "␣", color: DT.textDim, accessibilityLabel: "word gap") {
                 armCommit(cancel: true)
                 tree.addWordGap()
             }
-            morseButton(label: "−", color: DT.info) {
-                handleDah()
-            }
+            morseButton(label: "−", color: DT.info, accessibilityLabel: "dah", action: handleDah)
             txButton
         }
         .frame(height: 64)
@@ -200,11 +207,11 @@ struct MorseView: View {
 
     private var tapModeRow: some View {
         HStack(spacing: 8) {
-            controlButton(label: "⌫", color: DT.warn) {
+            controlButton(label: "⌫", color: DT.warn, accessibilityLabel: "backspace") {
                 if tree.currentPath.isEmpty { tree.deleteLastCharacter() }
                 else { tree.undoStep() }
             }
-            controlButton(label: "␣", color: DT.textDim) {
+            controlButton(label: "␣", color: DT.textDim, accessibilityLabel: "word gap") {
                 armCommit(cancel: true)
                 tree.addWordGap()
             }
@@ -238,6 +245,8 @@ struct MorseView: View {
                         if held >= tapDahThreshold { handleDah() } else { handleDit() }
                     }
             )
+            .accessibilityLabel("Morse key")
+            .accessibilityHint("Short press for dit, long press for dah")
     }
 
     private var txButton: some View {
@@ -252,6 +261,8 @@ struct MorseView: View {
         .buttonStyle(.plain)
         .disabled(!canTX)
         .frame(width: 80)
+        .accessibilityLabel("Transmit")
+        .accessibilityHint("Sends the outgoing message to the selected peer")
     }
 
     // MARK: - Mode row
@@ -288,7 +299,8 @@ struct MorseView: View {
 
     // MARK: - Buttons
 
-    private func morseButton(label: String, color: Color, action: @escaping () -> Void) -> some View {
+    private func morseButton(label: String, color: Color, accessibilityLabel: String,
+                             action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
                 .font(.system(size: 28, weight: .bold, design: .monospaced))
@@ -298,9 +310,12 @@ struct MorseView: View {
                 .overlay(Rectangle().strokeBorder(color, lineWidth: 1))
         }
         .buttonStyle(.plain)
+        // "·" and "−" are confusing for VoiceOver — spell it out.
+        .accessibilityLabel(accessibilityLabel)
     }
 
-    private func controlButton(label: String, color: Color, action: @escaping () -> Void) -> some View {
+    private func controlButton(label: String, color: Color, accessibilityLabel: String,
+                               action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
                 .font(.system(size: 18, weight: .bold, design: .monospaced))
@@ -311,6 +326,7 @@ struct MorseView: View {
         }
         .buttonStyle(.plain)
         .frame(width: 56)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     // MARK: - Interactions
