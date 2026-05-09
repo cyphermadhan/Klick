@@ -40,6 +40,15 @@ final class PTTSession: ObservableObject {
     /// Rough inbound level in [0,1] from the last received audio packet's payload size.
     @Published private(set) var inboundLevel: Double = 0
 
+    // MARK: Morse
+    /// Fires once per inbound morse message so `MorseView` can replay it
+    /// as beeps/flashes. Transient — cleared immediately after each fire.
+    @Published private(set) var incomingMorse: String?
+    /// Scrollback shown on the Morse screen. Both sent and received
+    /// messages land here, tagged by direction. Capped to avoid unbounded growth.
+    @Published private(set) var morseHistory: [MorseEntry] = []
+    private static let morseHistoryLimit = 50
+
     /// Loss percentage clamped to a display-friendly 0…100.
     var lossPercent: Double {
         let total = Double(packetsReceived + packetsLost)
@@ -160,6 +169,35 @@ final class PTTSession: ObservableObject {
         outboundLevel = 0
     }
 
+    // MARK: - Morse
+
+    /// Encrypt `text` and send it to the selected peer on its transport.
+    /// No-op if not running, not paired, or no peer selected.
+    func sendMorse(_ text: String) {
+        guard isRunning,
+              let peer = selectedPeer,
+              let key = sharedKey,
+              let transport = transports[peer.transport] else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let bytes = Data(trimmed.utf8)
+        do {
+            let (ciphertext, nonce) = try crypto.seal(bytes, key: key)
+            transport.sendText(.morseText, payload: ciphertext, nonce: nonce, to: peer)
+            packetsSent &+= 1
+            appendMorse(MorseEntry(text: trimmed, isIncoming: false))
+        } catch {
+            log.error("Morse encrypt failed: \(String(describing: error))")
+        }
+    }
+
+    private func appendMorse(_ entry: MorseEntry) {
+        morseHistory.append(entry)
+        if morseHistory.count > Self.morseHistoryLimit {
+            morseHistory.removeFirst(morseHistory.count - Self.morseHistoryLimit)
+        }
+    }
+
     /// Called by a display-link timer in the UI. Cheaply decays activity
     /// levels so the VU bars fall back to zero when audio stops flowing,
     /// without forcing a heavy per-packet UI update.
@@ -235,6 +273,27 @@ final class PTTSession: ObservableObject {
             packetsReceived &+= 1
             inboundLevel = min(1.0, max(0, Double(packet.payload.count - 20) / 80.0))
             pipeline.receive(opusFrame: opusFrame)
+        case .morseText:
+            guard let key = sharedKey else { return }
+            guard let plaintext = crypto.open(ciphertext: packet.payload, key: key, nonce: packet.nonce) else {
+                packetsDropped &+= 1
+                return
+            }
+            guard let text = String(data: plaintext, encoding: .utf8) else {
+                packetsDropped &+= 1
+                return
+            }
+            packetsReceived &+= 1
+            appendMorse(MorseEntry(text: text, isIncoming: true))
+            // Pulse once — MorseView observes this and re-plays beeps/flash.
+            // Nil it afterwards so an idempotent equal-text message still fires.
+            incomingMorse = text
+            Task { @MainActor [weak self] in
+                // One runloop tick is enough for SwiftUI to propagate the
+                // publisher change before we clear it.
+                try? await Task.sleep(for: .milliseconds(20))
+                self?.incomingMorse = nil
+            }
         case .ping:
             // Auto-respond with a pong so callers can use it for reachability checks.
             // No payload, no sequence coordination needed in M6.
@@ -243,4 +302,12 @@ final class PTTSession: ObservableObject {
             break
         }
     }
+}
+
+/// One entry in the Morse scrollback. `isIncoming` drives the `◂` / `▸`
+/// arrow and color in `MorseView`.
+struct MorseEntry: Identifiable, Equatable, Sendable {
+    let id = UUID()
+    let text: String
+    let isIncoming: Bool
 }

@@ -53,6 +53,12 @@ protocol AudioTransport: AnyObject {
     /// (voice is loss-tolerant; no retry).
     func sendAudio(opusPayload: Data, nonce: Data, to peer: PeerInfo)
 
+    /// Send an encrypted non-audio packet (Morse, later also chat/ack).
+    /// Transports that have a reliability dial (MPC) SHOULD use their
+    /// reliable mode here — text is small and latency-tolerant, unlike
+    /// voice. UDP just keeps sending best-effort; callers retry if needed.
+    func sendText(_ type: PacketType, payload: Data, nonce: Data, to peer: PeerInfo)
+
     /// Delivered for every inbound `Packet` the transport successfully
     /// decodes off the wire. Wire-level crypto lives one level up in
     /// `PTTSession.handleIncoming`.

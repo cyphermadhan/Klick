@@ -143,6 +143,27 @@ final class UDPTransport: AudioTransport, @unchecked Sendable {
         }
     }
 
+    func sendText(_ type: PacketType, payload: Data, nonce: Data, to peer: PeerInfo) {
+        guard peer.transport == .wifi else { return }
+        queue.async { [weak self] in
+            guard let self else { return }
+            let endpoint = peer.endpoint ?? self.endpointsByName[peer.name]
+            guard let endpoint else {
+                self.log.error("sendText: no endpoint for peer \(peer.name, privacy: .public)")
+                return
+            }
+            self.outgoingSequence &+= 1
+            let pkt = Packet(
+                type: type,
+                sequence: self.outgoingSequence,
+                timestampMs: Packet.currentTimestampMs(),
+                nonce: nonce,
+                payload: payload
+            )
+            self.sendInternal(pkt, to: endpoint)
+        }
+    }
+
     /// Back-door used by tests + Phase 0 diagnostics to send a raw Packet.
     func send(_ packet: Packet, to endpoint: NWEndpoint) {
         queue.async { [weak self] in

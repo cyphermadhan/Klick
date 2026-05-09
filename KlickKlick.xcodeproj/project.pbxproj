@@ -7,7 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B7459A814036E9DF6AC5F23 /* MorseCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B465C642A38ECE07060094FD /* MorseCode.swift */; };
 		126E30DB75E87D8072D22EA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5E72F13A7DB43AC5E1C2E3D4 /* Assets.xcassets */; };
+		202FADD4027A294EB8E5D931 /* MorseTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778982FD462625A1110A5C16 /* MorseTree.swift */; };
 		257BDD89914163033540776A /* PTTButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E761761A41DA239C19E0561E /* PTTButton.swift */; };
 		2F8CE1AB32C1E64A153E2586 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 453574259363FFD92C9865E0 /* PrivacyInfo.xcprivacy */; };
 		36861850B8746405EA9CE999 /* walkie-press.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 7AF8898518EB18037923E933 /* walkie-press.mp3 */; };
@@ -30,22 +32,27 @@
 		8AE9FBCFBD50B69C11789E5F /* UDPTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E1C4E325CA38FDED1B80DB /* UDPTransport.swift */; };
 		936F93767BE55FFE8A5ADF76 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA768B05DEB44570EC9E8EE /* DesignTokens.swift */; };
 		9C3E9ED89A1F556C547C57E8 /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF4F867D9A834BADA41E536 /* PairingView.swift */; };
+		9E527965EA6C4B0D14856EEF /* MorseTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = B80551F1D625E205A491387C /* MorseTone.swift */; };
 		A52F761F829C4F4E5323B2CE /* PeerDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78616869EE1C43E641FB3577 /* PeerDirectory.swift */; };
 		A8837376FF8FB36D0C8501A9 /* UDPTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 150201850050EAD328838ADD /* UDPTransportTests.swift */; };
 		A9E49000C9AC0CAB44D7DE41 /* AudioUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F2ECF21A2BFC863EBC5A9E /* AudioUtils.swift */; };
+		AD1ADCFF8FDA3C4727BA0E3A /* MorseTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11694DEEB649DDAE7C1B5753 /* MorseTreeView.swift */; };
 		B41A66EC62904DF4EFF681D9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD0801652E8C0A25C0E155F /* ContentView.swift */; };
 		B70B4DBC0FC9AF2DBB39DD32 /* FloatRingBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B2F6BA5B6952661A90C53B /* FloatRingBuffer.swift */; };
 		B87A7400EF4BE7257809A4DD /* RangeMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEB5BADBC3BCE6C0B41389ED /* RangeMode.swift */; };
 		B8F3AE7FCFE3151AB4D0690A /* AudioPlayback.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC80F6C6E752051169D6A33 /* AudioPlayback.swift */; };
 		C1B6018807952368131BD1CF /* PacketProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D11DC5B1CF10FC75AA9BFCE /* PacketProtocol.swift */; };
 		C51A859B765DC85EE0CB7252 /* CryptoServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129247B9612BEC599B57853B /* CryptoServiceTests.swift */; };
+		CDE4D9452CE7A7F0435BD5D6 /* MorseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5251EB79008644978987A7B /* MorseTests.swift */; };
 		CF30F1AF97C4B2984DAB3942 /* PacketProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F4381153CFA052A72826B1 /* PacketProtocolTests.swift */; };
 		D095983160A3865F96B3C8FA /* PairingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35A4C58F38597FB9153BF2B /* PairingServiceTests.swift */; };
 		D0A315DB24FEE46F1848507C /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 336EE65987471D7E849B2163 /* QRScannerView.swift */; };
 		D53B77F4FBB483E75E92FBAC /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA248C85D299C3CFEAC3B36E /* AudioSessionManager.swift */; };
 		DA1C4553689A26D6A727FD5C /* CryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DA852F03C1CF67F44A54350 /* CryptoService.swift */; };
 		E5BCEA832EAFCA2EB4892109 /* PeerListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78CE62140BCFC1094E48E491 /* PeerListView.swift */; };
+		EE229D873DDB7FBD8E659835 /* MorseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D8B91AA7E5956A5B527518 /* MorseView.swift */; };
 		F10B8D54AE74CE33CC2E19EA /* AudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = C86A611162EB4AB29CBD4182 /* AudioCapture.swift */; };
+		F403B3F8CAE4E35AC93B77B8 /* FlashlightBeacon.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F26B84FE9BC641F6F8485B /* FlashlightBeacon.swift */; };
 		F40DF069CE1D0C1C7F1BBE51 /* OpusCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413547B6B5B1FBCEED1FB57F /* OpusCodec.swift */; };
 		FB3F33F64A7C2463B1E01084 /* AudioPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03AEC384CDC96C142A1CE1E1 /* AudioPipeline.swift */; };
 		FD2F7605997C170C1BD39E41 /* TerminalPrimitives.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FCDD23E0910B1E1363123B1 /* TerminalPrimitives.swift */; };
@@ -63,9 +70,11 @@
 
 /* Begin PBXFileReference section */
 		03AEC384CDC96C142A1CE1E1 /* AudioPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPipeline.swift; sourceTree = "<group>"; };
+		11694DEEB649DDAE7C1B5753 /* MorseTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseTreeView.swift; sourceTree = "<group>"; };
 		129247B9612BEC599B57853B /* CryptoServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoServiceTests.swift; sourceTree = "<group>"; };
 		150201850050EAD328838ADD /* UDPTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDPTransportTests.swift; sourceTree = "<group>"; };
 		1DA852F03C1CF67F44A54350 /* CryptoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoService.swift; sourceTree = "<group>"; };
+		20D8B91AA7E5956A5B527518 /* MorseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseView.swift; sourceTree = "<group>"; };
 		2179D4EEFD3CABE3E8BF881F /* KeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyStore.swift; sourceTree = "<group>"; };
 		2D11DC5B1CF10FC75AA9BFCE /* PacketProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketProtocol.swift; sourceTree = "<group>"; };
 		336EE65987471D7E849B2163 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
@@ -79,6 +88,7 @@
 		5E72F13A7DB43AC5E1C2E3D4 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		616327330400F0B0ADD846C0 /* MPCTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MPCTransport.swift; sourceTree = "<group>"; };
 		62681C5795645642F70C3A27 /* PTTSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTTSession.swift; sourceTree = "<group>"; };
+		778982FD462625A1110A5C16 /* MorseTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseTree.swift; sourceTree = "<group>"; };
 		78616869EE1C43E641FB3577 /* PeerDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerDirectory.swift; sourceTree = "<group>"; };
 		78CE62140BCFC1094E48E491 /* PeerListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerListView.swift; sourceTree = "<group>"; };
 		7A6ABB24D97574A8A093D026 /* DeviceName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceName.swift; sourceTree = "<group>"; };
@@ -90,8 +100,12 @@
 		99F4381153CFA052A72826B1 /* PacketProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketProtocolTests.swift; sourceTree = "<group>"; };
 		9AF4F867D9A834BADA41E536 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
 		9FCDD23E0910B1E1363123B1 /* TerminalPrimitives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalPrimitives.swift; sourceTree = "<group>"; };
+		A0F26B84FE9BC641F6F8485B /* FlashlightBeacon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashlightBeacon.swift; sourceTree = "<group>"; };
 		A35A4C58F38597FB9153BF2B /* PairingServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingServiceTests.swift; sourceTree = "<group>"; };
+		A5251EB79008644978987A7B /* MorseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseTests.swift; sourceTree = "<group>"; };
 		AAA768B05DEB44570EC9E8EE /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		B465C642A38ECE07060094FD /* MorseCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseCode.swift; sourceTree = "<group>"; };
+		B80551F1D625E205A491387C /* MorseTone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseTone.swift; sourceTree = "<group>"; };
 		C09D69348A2B82BBDDA8D490 /* AudioTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTransport.swift; sourceTree = "<group>"; };
 		C13C198A50388D0159C48929 /* PeerInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerInfo.swift; sourceTree = "<group>"; };
 		C416D67ED47534CEBAFD17E3 /* PairingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingService.swift; sourceTree = "<group>"; };
@@ -105,7 +119,7 @@
 		E8B2F6BA5B6952661A90C53B /* FloatRingBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatRingBuffer.swift; sourceTree = "<group>"; };
 		F3A14F51FA22484C0D90198D /* walkie-release.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "walkie-release.mp3"; sourceTree = "<group>"; };
 		FEC80F6C6E752051169D6A33 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
-		"TEMP_D111580A-5A13-40B1-846E-E6318F549F81" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		"TEMP_C37B4180-07AE-49D5-89DF-4E27EC535157" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -211,6 +225,7 @@
 			isa = PBXGroup;
 			children = (
 				129247B9612BEC599B57853B /* CryptoServiceTests.swift */,
+				A5251EB79008644978987A7B /* MorseTests.swift */,
 				35D3735E6C68F3F128F9FE38 /* OpusCodecTests.swift */,
 				99F4381153CFA052A72826B1 /* PacketProtocolTests.swift */,
 				A35A4C58F38597FB9153BF2B /* PairingServiceTests.swift */,
@@ -237,11 +252,23 @@
 				23224BC00BACEBD1C4553B42 /* Audio */,
 				EC778098BBB9AE2076108476 /* Crypto */,
 				A56EF6C2489CE0CB47C93D57 /* Discovery */,
+				F25B8A2E3DC03D0CD0C699CB /* Morse */,
 				2517C8E90CFD985918A6F761 /* Pairing */,
 				9A1B2B5C4AB0D03A1E3A6E5F /* Transport */,
 				FDB199DAF76B375C59B5CE24 /* UI */,
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		F25B8A2E3DC03D0CD0C699CB /* Morse */ = {
+			isa = PBXGroup;
+			children = (
+				A0F26B84FE9BC641F6F8485B /* FlashlightBeacon.swift */,
+				B465C642A38ECE07060094FD /* MorseCode.swift */,
+				B80551F1D625E205A491387C /* MorseTone.swift */,
+				778982FD462625A1110A5C16 /* MorseTree.swift */,
+			);
+			path = Morse;
 			sourceTree = "<group>";
 		};
 		F51BB3C79AD9410DBF44CF67 /* Tests */ = {
@@ -257,6 +284,8 @@
 			children = (
 				7BD0801652E8C0A25C0E155F /* ContentView.swift */,
 				AAA768B05DEB44570EC9E8EE /* DesignTokens.swift */,
+				11694DEEB649DDAE7C1B5753 /* MorseTreeView.swift */,
+				20D8B91AA7E5956A5B527518 /* MorseView.swift */,
 				78CE62140BCFC1094E48E491 /* PeerListView.swift */,
 				E761761A41DA239C19E0561E /* PTTButton.swift */,
 				4389638E207A96A04375F3FE /* SettingsView.swift */,
@@ -265,10 +294,10 @@
 			path = UI;
 			sourceTree = "<group>";
 		};
-		"TEMP_25C45E74-1216-4E2E-861E-2F7867C6EDBE" /* Klick */ = {
+		"TEMP_D32626FA-E9A5-4526-B08E-9BB265D32E68" /* Klick */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_D111580A-5A13-40B1-846E-E6318F549F81" /* Signing.xcconfig */,
+				"TEMP_C37B4180-07AE-49D5-89DF-4E27EC535157" /* Signing.xcconfig */,
 			);
 			path = Klick;
 			sourceTree = "<group>";
@@ -385,10 +414,16 @@
 				DA1C4553689A26D6A727FD5C /* CryptoService.swift in Sources */,
 				936F93767BE55FFE8A5ADF76 /* DesignTokens.swift in Sources */,
 				5A39D72423221BFA163619BF /* DeviceName.swift in Sources */,
+				F403B3F8CAE4E35AC93B77B8 /* FlashlightBeacon.swift in Sources */,
 				B70B4DBC0FC9AF2DBB39DD32 /* FloatRingBuffer.swift in Sources */,
 				6FC2D74576B4AAE09BFFB9FC /* KeyStore.swift in Sources */,
 				478BE561068A82CFB6D286D4 /* KlickKlickApp.swift in Sources */,
 				515FFDEDDF4484F6502521E6 /* MPCTransport.swift in Sources */,
+				0B7459A814036E9DF6AC5F23 /* MorseCode.swift in Sources */,
+				9E527965EA6C4B0D14856EEF /* MorseTone.swift in Sources */,
+				202FADD4027A294EB8E5D931 /* MorseTree.swift in Sources */,
+				AD1ADCFF8FDA3C4727BA0E3A /* MorseTreeView.swift in Sources */,
+				EE229D873DDB7FBD8E659835 /* MorseView.swift in Sources */,
 				F40DF069CE1D0C1C7F1BBE51 /* OpusCodec.swift in Sources */,
 				257BDD89914163033540776A /* PTTButton.swift in Sources */,
 				4E9BC198D1FFBEB5AD3ACF57 /* PTTSession.swift in Sources */,
@@ -412,6 +447,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C51A859B765DC85EE0CB7252 /* CryptoServiceTests.swift in Sources */,
+				CDE4D9452CE7A7F0435BD5D6 /* MorseTests.swift in Sources */,
 				71C97E76A8363CDC1B01C27B /* OpusCodecTests.swift in Sources */,
 				CF30F1AF97C4B2984DAB3942 /* PacketProtocolTests.swift in Sources */,
 				D095983160A3865F96B3C8FA /* PairingServiceTests.swift in Sources */,
@@ -503,7 +539,7 @@
 		};
 		6B01971E46A898944C3B7FEC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_D111580A-5A13-40B1-846E-E6318F549F81" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_C37B4180-07AE-49D5-89DF-4E27EC535157" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -540,7 +576,7 @@
 		};
 		AE0F2DE2B6837F30287A01D1 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_D111580A-5A13-40B1-846E-E6318F549F81" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_C37B4180-07AE-49D5-89DF-4E27EC535157" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";

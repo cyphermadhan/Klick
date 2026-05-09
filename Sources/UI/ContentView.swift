@@ -11,6 +11,7 @@ struct ContentView: View {
     @StateObject private var session = PTTSession()
     @State private var showingPairing = false
     @State private var showingSettings = false
+    @State private var showingMorse = false
 
     /// 10 Hz decay pulse for VU bars — cheap, visible, and keeps UI feeling live.
     private let levelTick = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
@@ -58,6 +59,7 @@ struct ContentView: View {
         .toolbar(.hidden)
         .onReceive(levelTick) { _ in session.tickLevels() }
         .sheet(isPresented: $showingSettings) { SettingsView() }
+        .sheet(isPresented: $showingMorse) { MorseView(session: session) }
         .sheet(isPresented: $showingPairing) {
             PairingView()
                 .onDisappear {
@@ -107,6 +109,7 @@ struct ContentView: View {
             HStack(spacing: 6) {
                 Spacer()
                 headerButton("PAIR") { showingPairing = true }
+                headerButton("MORSE", accent: DT.sys) { showingMorse = true }
                 headerButton("SYS") { showingSettings = true }
                 headerButton(session.isRunning ? "STOP" : "START",
                              accent: session.isRunning ? DT.warn : DT.ok) {

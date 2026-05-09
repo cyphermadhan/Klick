@@ -142,6 +142,32 @@ final class MPCTransport: NSObject, AudioTransport, @unchecked Sendable {
         }
     }
 
+    func sendText(_ type: PacketType, payload: Data, nonce: Data, to peer: PeerInfo) {
+        guard peer.transport == .nearby else { return }
+        queue.async { [weak self] in
+            guard let self,
+                  let session = self.session,
+                  let mcPeer = self.peersByName[peer.name] else { return }
+            guard session.connectedPeers.contains(mcPeer) else { return }
+            self.outgoingSequence &+= 1
+            let pkt = Packet(
+                type: type,
+                sequence: self.outgoingSequence,
+                timestampMs: Packet.currentTimestampMs(),
+                nonce: nonce,
+                payload: payload
+            )
+            let data = pkt.encode()
+            do {
+                // Text goes over reliable — it's tiny and we don't want
+                // users typing something the other end never sees.
+                try session.send(data, toPeers: [mcPeer], with: .reliable)
+            } catch {
+                self.log.error("MPC text send failed: \(String(describing: error))")
+            }
+        }
+    }
+
     // MARK: - Private
 
     private func publishPeersLocked() {

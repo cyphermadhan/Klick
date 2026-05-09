@@ -20,6 +20,24 @@ final class PacketProtocolTests: XCTestCase {
         XCTAssertEqual(decoded, original)
     }
 
+    func testMorseTextRoundtrip() throws {
+        // `morseText` carries an (already-encrypted) UTF-8 payload. The
+        // wire format is unchanged from audio — this just confirms the
+        // new type byte roundtrips through decode without a special case.
+        let payload = Data("HELLO OM 73".utf8)
+        let original = Packet(
+            type: .morseText,
+            sequence: 7,
+            timestampMs: 1_700_000_001_234,
+            nonce: Packet.zeroNonce(),
+            payload: payload
+        )
+        let encoded = original.encode()
+        let decoded = try Packet.decode(encoded)
+        XCTAssertEqual(decoded.type, .morseText)
+        XCTAssertEqual(decoded, original)
+    }
+
     func testPingHasEmptyPayload() throws {
         let pkt = Packet(
             type: .ping,

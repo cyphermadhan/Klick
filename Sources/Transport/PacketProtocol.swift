@@ -18,6 +18,10 @@ enum PacketType: UInt8, Sendable {
     case audio     = 0x01
     case ping      = 0x02
     case pong      = 0x03
+    /// UTF-8 text composed via the Morse screen. Payload is the composed
+    /// message, still encrypted with libsodium secretbox (same as audio).
+    /// The receiver decodes UTF-8 and appends to its RX buffer.
+    case morseText = 0x04
 }
 
 struct Packet: Sendable, Equatable {
