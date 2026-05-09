@@ -65,8 +65,24 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         windowBuffer.reserveCapacity(4096) // generous upper bound
     }
 
+    /// True when the binary was built for an iOS simulator. Simulators
+    /// lack real mic hardware; installing a tap on the input node trips
+    /// an internal AVAudioEngine precondition the moment render starts.
+    private static let isSimulator: Bool = {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
+    }()
+
     func start() async {
         guard !isRunning else { return }
+
+        if Self.isSimulator {
+            log.error("Audio listen unavailable in the simulator — use a real device")
+            return
+        }
 
         // Mic permission — the PTT flow already asks, so this is a
         // defensive check in case the user opened the listen sheet
@@ -77,12 +93,19 @@ final class AudioToneDecoder: NSObject, ObservableObject {
             return
         }
 
-        do {
-            try AudioSessionManager.shared.configureForPTT()
-            try AudioSessionManager.shared.activate()
-        } catch {
-            log.error("Audio session configure/activate failed: \(String(describing: error))")
-            return
+        // Only (re)configure the session if it isn't already in a
+        // mic-capable category. PTT may already have it set up; a
+        // reconfigure on an actively-rendering session can trip the
+        // other engine's graph.
+        let session = AVAudioSession.sharedInstance()
+        if session.category != .playAndRecord {
+            do {
+                try AudioSessionManager.shared.configureForPTT()
+                try AudioSessionManager.shared.activate()
+            } catch {
+                log.error("Audio session configure/activate failed: \(String(describing: error))")
+                return
+            }
         }
 
         let input = engine.inputNode
@@ -139,26 +162,55 @@ final class AudioToneDecoder: NSObject, ObservableObject {
 
     private func startTick() {
         tickTimer?.invalidate()
-        tickTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in
+        // Timer fires on the main run loop → we're already on the main
+        // actor context here, no Task hop needed. The tick does two
+        // things: drain any samples the render thread has buffered
+        // (runs Goertzel + demod), then prompt the demod to flush any
+        // trailing letter whose off-gap has crossed the threshold.
+        tickTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.drainPendingSamples()
                 self.demod.tick(at: Date().timeIntervalSince1970 * 1000)
             }
         }
     }
 
+    /// Pending samples produced on the render thread, drained on the
+    /// main-actor tick. Never mutate from two places at once — writes
+    /// from `processBuffer` and reads from `drainPendingSamples` both
+    /// go through `pendingLock`.
+    private let pendingLock = NSLock()
+    nonisolated(unsafe) private var pendingSamples: [Float] = []
+
     nonisolated private func processBuffer(_ buffer: AVAudioPCMBuffer) {
         guard let channelData = buffer.floatChannelData?[0] else { return }
         let frameLength = Int(buffer.frameLength)
-        // Copy into a Swift array so we can append across buffer
-        // boundaries without racing the CoreAudio thread.
+        // Copy into a Swift array so the render thread doesn't hand off
+        // a raw pointer that AVAudioEngine might recycle.
         var samples: [Float] = []
         samples.reserveCapacity(frameLength)
         for i in 0..<frameLength {
             samples.append(channelData[i])
         }
-        Task { @MainActor in
-            self.appendAndEvaluate(samples)
+        // Creating a Task from the real-time render thread can trip
+        // EXC_BREAKPOINT in the Swift concurrency runtime when the
+        // executor setup races with engine teardown. Stash into a
+        // lock-protected buffer instead; the main-thread tick drains it.
+        pendingLock.lock()
+        pendingSamples.append(contentsOf: samples)
+        pendingLock.unlock()
+    }
+
+    /// Called from the main-thread tick timer. Moves any samples the
+    /// render thread has buffered into the Goertzel path.
+    private func drainPendingSamples() {
+        pendingLock.lock()
+        let fresh = pendingSamples
+        pendingSamples.removeAll(keepingCapacity: true)
+        pendingLock.unlock()
+        if !fresh.isEmpty {
+            appendAndEvaluate(fresh)
         }
     }
 
