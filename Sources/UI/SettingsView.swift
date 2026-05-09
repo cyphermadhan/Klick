@@ -3,6 +3,9 @@ import SwiftUI
 /// Terminal-style settings sheet.
 struct SettingsView: View {
     @ObservedObject var radio: RadioState
+    /// Optional mesh link, forwarded to `RadioView` so its PAIR sheet can
+    /// drive a real BLE scan. Nil in previews / unit tests.
+    var meshLink: CoreBluetoothMeshtasticLink?
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = DeviceName.current
     @State private var rangeMode: RangeMode = RangeModeStore.current
@@ -96,7 +99,7 @@ struct SettingsView: View {
                                     DotLeader(label: "DEVICE", value: info.deviceName.uppercased())
                                 }
                                 NavigationLink {
-                                    RadioView(state: radio)
+                                    RadioView(state: radio, link: meshLink)
                                 } label: {
                                     HStack {
                                         Image(systemName: "antenna.radiowaves.left.and.right")

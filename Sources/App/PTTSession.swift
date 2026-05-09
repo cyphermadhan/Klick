@@ -69,11 +69,13 @@ final class PTTSession: ObservableObject {
     /// a ✓ / ⏲ / ✗ glyph next to outbound mesh rows. No-op for WiFi / MPC
     /// sends (those complete terminally as `.sent` without tracking).
     let deliveryTracker = MessageDeliveryTracker()
-    /// Link used by `LoRaBridge`. Injected here (not inside the bridge)
-    /// so Phase 3b.2b can swap `FakeMeshtasticLink` → the real CoreBluetooth
-    /// impl with one line. Phase 3b.2a leaves it as a fake that never
-    /// connects, so `.mesh` sends fall through to the "not connected" path.
-    var meshLink: MeshtasticLink = FakeMeshtasticLink()
+    /// Link used by `LoRaBridge`. Production uses the CoreBluetooth impl;
+    /// tests can replace it with `FakeMeshtasticLink`.
+    let meshLink: MeshtasticLink = CoreBluetoothMeshtasticLink()
+    /// Codec used by `LoRaBridge`. Injected so tests can use the stub
+    /// (passthrough) variant; production uses the real Meshtastic
+    /// protobuf codec.
+    let meshCodec: MeshtasticCodec = MeshtasticProtoCodec()
     private let crypto = CryptoService()
     private let pairing = PairingService()
     private let sounds = WalkieSoundSynth()
@@ -139,8 +141,30 @@ final class PTTSession: ObservableObject {
                 startedTransports[.nearby] = mpc
             }
             if mode.includesMesh {
-                let mesh = LoRaBridge(link: meshLink)
+                let mesh = LoRaBridge(link: meshLink, codec: meshCodec)
                 wireTransport(mesh)
+                // Mirror link connection-state changes into RadioState so
+                // the Radio screen reflects reality. We don't populate a
+                // full RadioInfo yet — that comes from the FromRadio
+                // config-complete stream which Phase 3b.2b hooks up.
+                meshLink.onConnectedChange = { [weak self] connected in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        if connected {
+                            let info = self.radio.displayInfo ?? RadioInfo(
+                                deviceName: "RADIO",
+                                model: "MESHTASTIC",
+                                firmwareVersion: "",
+                                regionPreset: "",
+                                batteryPercent: nil,
+                                rssi: nil
+                            )
+                            self.radio.didConnect(deviceId: info.deviceName, info: info)
+                        } else {
+                            self.radio.didDisconnect()
+                        }
+                    }
+                }
                 try mesh.start(advertisingAs: name)
                 startedTransports[.mesh] = mesh
             }

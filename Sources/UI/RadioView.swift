@@ -17,10 +17,13 @@ import SwiftUI
 ///   4. Actions — PAIR NEW / DISCONNECT / FORGET RADIO
 struct RadioView: View {
     @ObservedObject var state: RadioState
+    /// Mesh link the pair sheet drives. Optional so previews / unit
+    /// tests can omit it.
+    var link: CoreBluetoothMeshtasticLink?
     @Environment(\.dismiss) private var dismiss
 
     @State private var region: Region = RegionStore.current
-    @State private var showingPairStub = false
+    @State private var showingPairSheet = false
 
     var body: some View {
         ZStack {
@@ -50,11 +53,18 @@ struct RadioView: View {
         }
         .preferredColorScheme(.dark)
         .toolbar(.hidden)
-        .alert("PAIRING NOT AVAILABLE YET",
-               isPresented: $showingPairStub) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("BLE pair + Meshtastic protobuf codec lands in Phase 3b.2. This build's Radio screen is read-only.")
+        .sheet(isPresented: $showingPairSheet) {
+            if let link {
+                PairSheet(link: link, onPick: { entry in
+                    state.beginPairing()
+                    link.connect(to: entry.id)
+                    showingPairSheet = false
+                })
+            } else {
+                Text("Pairing requires a live BLE link. Present RadioView with a CoreBluetoothMeshtasticLink in production.")
+                    .walkieCaption()
+                    .padding()
+            }
         }
     }
 
@@ -239,7 +249,7 @@ struct RadioView: View {
     private var actionFrame: some View {
         TerminalFrame("ACTIONS") {
             VStack(spacing: 10) {
-                Button(action: { showingPairStub = true }) {
+                Button(action: { showingPairSheet = true }) {
                     HStack {
                         Image(systemName: "antenna.radiowaves.left.and.right")
                         Text("PAIR NEW RADIO…")
@@ -267,6 +277,92 @@ struct RadioView: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+    }
+}
+
+/// Scan-and-pick sheet shown when the user taps PAIR NEW RADIO.
+/// Starts a BLE scan on appear, shows discovered devices sorted by
+/// strongest signal, invokes `onPick` with the chosen entry.
+private struct PairSheet: View {
+    let link: CoreBluetoothMeshtasticLink
+    let onPick: (CoreBluetoothMeshtasticLink.ScanEntry) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var results: [CoreBluetoothMeshtasticLink.ScanEntry] = []
+
+    var body: some View {
+        ZStack {
+            DT.bg.ignoresSafeArea()
+            VStack(spacing: 16) {
+                HStack {
+                    Text("SCAN")
+                        .walkieLabel(13, weight: .heavy, tracking: 3)
+                        .foregroundStyle(DT.text)
+                    Spacer()
+                    Button("CLOSE") { dismiss() }
+                        .font(DT.mono(11, weight: .bold))
+                        .tracking(DT.labelTracking)
+                        .foregroundStyle(DT.textDim)
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
+                        .buttonStyle(.plain)
+                }
+
+                TerminalFrame("DISCOVERED") {
+                    if results.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                ProgressView().tint(DT.info)
+                                Text("SCANNING FOR MESHTASTIC RADIOS…")
+                                    .walkieLabel(11)
+                                    .foregroundStyle(DT.textDim)
+                            }
+                            Text("KEEP THE RADIO POWERED ON AND WITHIN A FEW METERS.")
+                                .walkieCaption()
+                                .foregroundStyle(DT.textFaint)
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(results) { entry in
+                                Button { onPick(entry) } label: {
+                                    HStack {
+                                        Text(entry.name.uppercased())
+                                            .walkieLabel(12)
+                                            .foregroundStyle(DT.text)
+                                        Spacer()
+                                        Text("\(entry.rssi) DBM")
+                                            .font(DT.mono(10))
+                                            .foregroundStyle(DT.textDim)
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(DT.info)
+                                    }
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 10)
+                                    .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .preferredColorScheme(.dark)
+        .onAppear {
+            link.onScanResults = { entries in
+                Task { @MainActor in
+                    results = entries
+                }
+            }
+            link.startScan()
+        }
+        .onDisappear {
+            link.stopScan()
         }
     }
 }

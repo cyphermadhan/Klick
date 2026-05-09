@@ -90,10 +90,11 @@ targets:
         NSMicrophoneUsageDescription: Used for push-to-talk voice communication.
         NSLocalNetworkUsageDescription: Used to discover and communicate with nearby devices.
         NSCameraUsageDescription: Used to scan pairing QR codes.
-        # Bluetooth is required by MultipeerConnectivity (the "Nearby" transport).
-        # iOS will surface this string in the permission prompt that fires the
-        # first time MPC starts advertising/browsing with no WiFi infra present.
-        NSBluetoothAlwaysUsageDescription: Used to discover and talk to nearby devices when WiFi is unavailable.
+        # Bluetooth is required by MultipeerConnectivity (the "Nearby" transport)
+        # and by the Meshtastic LoRa radio pair flow (the "Mesh" transport).
+        # iOS will surface this string in the permission prompt the first
+        # time either subsystem starts — wording covers both.
+        NSBluetoothAlwaysUsageDescription: Used to discover nearby phones when WiFi is unavailable and to pair with a LoRa radio for long-range text messages.
         NSBonjourServices:
           - _walkie._udp.
           # MultipeerConnectivity registers its service type under both

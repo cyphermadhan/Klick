@@ -25,7 +25,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Used to discover and talk to nearby devices when WiFi is unavailable.</string>
+	<string>Used to discover nearby phones when WiFi is unavailable and to pair with a LoRa radio for long-range text messages.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_walkie._udp.</string>
