@@ -52,7 +52,14 @@ final class AudioToneDecoder: NSObject, ObservableObject {
     private var goertzelCoeff: Double =
         2.0 * cos(2.0 * .pi * AudioToneDecoder.toneHz / 48_000)
 
-    private var tickTimer: Timer?
+    /// Main-actor task that drains captured samples into the Goertzel +
+    /// demodulator at a fixed cadence. Replaces an earlier `Timer` +
+    /// `MainActor.assumeIsolated` approach that was crashing with
+    /// dispatch_assert_queue_fail — the timer block was being scheduled
+    /// on AVAudioEngine's internal service queue (not main), and
+    /// `assumeIsolated` panics when that assumption fails. A `Task`
+    /// pinned to the main actor doesn't have that issue.
+    private var tickTask: Task<Void, Never>?
     /// Accumulator for partial windows when the tap buffer length
     /// doesn't line up with our window size.
     private var windowBuffer: [Float] = []
@@ -148,8 +155,8 @@ final class AudioToneDecoder: NSObject, ObservableObject {
 
     func stop() {
         guard isRunning else { return }
-        tickTimer?.invalidate()
-        tickTimer = nil
+        tickTask?.cancel()
+        tickTask = nil
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         isRunning = false
@@ -161,14 +168,14 @@ final class AudioToneDecoder: NSObject, ObservableObject {
     // MARK: - Private
 
     private func startTick() {
-        tickTimer?.invalidate()
-        // Timer fires on the main run loop → we're already on the main
-        // actor context here, no Task hop needed. The tick does two
-        // things: drain any samples the render thread has buffered
-        // (runs Goertzel + demod), then prompt the demod to flush any
-        // trailing letter whose off-gap has crossed the threshold.
-        tickTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
+        tickTask?.cancel()
+        // Task with @MainActor inheritance — Swift concurrency
+        // guarantees the body runs on the main-actor executor, so we
+        // don't need (and can't use) `MainActor.assumeIsolated` here.
+        tickTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(50))
+                if Task.isCancelled { return }
                 guard let self else { return }
                 self.drainPendingSamples()
                 self.demod.tick(at: Date().timeIntervalSince1970 * 1000)
