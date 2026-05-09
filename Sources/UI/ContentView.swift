@@ -1,17 +1,30 @@
 import SwiftUI
 
-/// Main screen — laid out like a hardware front panel crossed with a
-/// terminal readout. From top to bottom:
-///   1. Slim status header (WALKIE · CH 01 · OPUS 48K · SEC XS20/P1305)
-///   2. Three MPC-style status tiles (LINK / PAIR / PEER)
-///   3. Peer list (terminal rows)
-///   4. PTT transmit tile with VU meters
-///   5. Diagnostic strip (PKT TX/RX, LOSS, SEQ)
+/// Main screen — terminal-style hardware-front-panel layout.
+///
+/// Layout, top → bottom:
+///   1. Brand strip (WALKIE · CH 01 · OPUS 48K · SEC XS20·P1305)
+///   2. Four nav pills: TALK (current) / CHAT / LISTEN / SETTINGS
+///   3. Three tappable status tiles: LINK / PAIR / PEER — each does
+///      double duty as indicator and action. LINK toggles start/stop,
+///      PAIR opens the pair sheet, PEER opens the peer-list sheet.
+///   4. Telemetry strip
+///   5. Hint line
+///   6. PTT transmit button pinned at the extreme bottom
+///
+/// The peer list used to fill the middle of the screen; now it lives
+/// behind the PEER tile so this screen stays focused on the two most
+/// common verbs: "go live" (LINK) and "hold to talk" (PTT).
 struct ContentView: View {
     @StateObject private var session = PTTSession()
     @State private var showingPairing = false
     @State private var showingSettings = false
     @State private var showingChat = false
+    @State private var showingListen = false
+    @State private var showingPeers = false
+    /// Buffer for characters streamed from ListenView. Committed to the
+    /// session's RX scroll as one entry when the listen sheet closes.
+    @State private var decodedListenBuffer = ""
 
     /// 10 Hz decay pulse for VU bars — cheap, visible, and keeps UI feeling live.
     private let levelTick = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
@@ -20,36 +33,14 @@ struct ContentView: View {
         ZStack {
             DT.bg.ignoresSafeArea()
 
-            VStack(spacing: 14) {
-                headerBar
-
+            VStack(spacing: 12) {
+                brandStrip
+                navPills
                 statusTiles
-
-                TerminalFrame("PEERS") {
-                    PeerListView(directory: session.directory,
-                                 selectedPeer: $session.selectedPeer)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(maxHeight: .infinity)
-
-                PTTButton(
-                    isTransmitting: session.isTransmitting,
-                    isEnabled: canTransmit,
-                    outboundLevel: session.outboundLevel,
-                    inboundLevel: session.inboundLevel,
-                    onBegin: {
-                        session.playPressSound()
-                        session.beginTransmit()
-                    },
-                    onEnd: {
-                        session.playReleaseSound()
-                        session.endTransmit()
-                    }
-                )
-
                 diagnosticStrip
-
                 hintLine
+                Spacer(minLength: 0)
+                pttButton
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -65,6 +56,17 @@ struct ContentView: View {
         .sheet(isPresented: $showingChat) {
             ChatView(session: session, tracker: session.deliveryTracker)
         }
+        .sheet(isPresented: $showingListen, onDismiss: flushDecodedListenBuffer) {
+            ListenView(onCharacter: { char in
+                // Accumulate here rather than pushing each char as its
+                // own session entry — one dash-and-dit message should
+                // appear as one row in the RX scroll, not twenty.
+                decodedListenBuffer.append(char)
+            })
+        }
+        .sheet(isPresented: $showingPeers) {
+            PeerListSheet(session: session)
+        }
         .sheet(isPresented: $showingPairing) {
             PairingView()
                 .onDisappear {
@@ -76,114 +78,129 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Brand strip
 
-    private var headerBar: some View {
-        VStack(spacing: 8) {
-            // Row 1: brand + codec/cipher metadata. Laid out as a mono strip
-            // with vertical bar separators so it reads like a status header.
-            HStack(spacing: 8) {
-                Text("WALKIE")
-                    .walkieLabel(14, weight: .heavy, tracking: 3)
-                    .foregroundStyle(DT.text)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                Rectangle().fill(DT.border).frame(width: 1, height: 12)
-                Text("CH 01")
-                    .walkieLabel(11)
-                    .foregroundStyle(DT.textDim)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                Rectangle().fill(DT.border).frame(width: 1, height: 12)
-                Text("OPUS 48K")
-                    .walkieLabel(11)
-                    .foregroundStyle(DT.textDim)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                Rectangle().fill(DT.border).frame(width: 1, height: 12)
-                Text("XS20·P1305")
-                    .walkieLabel(11)
-                    .foregroundStyle(DT.textDim)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                Spacer(minLength: 0)
+    private var brandStrip: some View {
+        HStack(spacing: 8) {
+            Text("WALKIE")
+                .walkieLabel(14, weight: .heavy, tracking: 3)
+                .foregroundStyle(DT.text)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Rectangle().fill(DT.border).frame(width: 1, height: 12)
+            Text("CH 01")
+                .walkieLabel(11)
+                .foregroundStyle(DT.textDim)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Rectangle().fill(DT.border).frame(width: 1, height: 12)
+            Text("OPUS 48K")
+                .walkieLabel(11)
+                .foregroundStyle(DT.textDim)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Rectangle().fill(DT.border).frame(width: 1, height: 12)
+            Text("XS20·P1305")
+                .walkieLabel(11)
+                .foregroundStyle(DT.textDim)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: - Nav pills (TALK / CHAT / LISTEN / SETTINGS)
+
+    private var navPills: some View {
+        HStack(spacing: 6) {
+            navPill(title: "TALK", icon: "dot.radiowaves.left.and.right",
+                    accent: DT.ok, active: true, action: {})
+            navPill(title: "CHAT", icon: "bubble.left.fill",
+                    accent: DT.sys, active: false) { showingChat = true }
+            navPill(title: "LISTEN", icon: "ear.fill",
+                    accent: DT.info, active: false) { showingListen = true }
+            navPill(title: "SETTINGS", icon: "slider.horizontal.3",
+                    accent: DT.textDim, active: false) { showingSettings = true }
+        }
+    }
+
+    /// Uniform icon+text pill. All four have the same height and padding
+    /// so the nav row reads as one consistent control strip rather than
+    /// a mix of text-only and icon-bearing buttons like before.
+    private func navPill(title: String, icon: String, accent: Color,
+                         active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .bold))
+                Text(title).walkieLabel(10)
+            }
+            .foregroundStyle(active ? DT.bg : accent)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity)
+            .frame(height: 32)
+            .background(active ? accent : Color.clear)
+            .overlay(Rectangle().strokeBorder(accent.opacity(active ? 1 : 0.6), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(active) // TALK is the current screen — disable interaction
+    }
+
+    // MARK: - Status tiles (now tappable)
+
+    private var statusTiles: some View {
+        HStack(alignment: .top, spacing: 10) {
+            tappableTile(action: toggleRunning) {
+                StatusTile(
+                    title: "LINK",
+                    subtitle: session.isRunning ? "LIVE · TAP TO STOP" : "TAP TO GO LIVE",
+                    accent: session.isRunning ? DT.ok : DT.info,
+                    active: session.isRunning
+                ) {
+                    Image(systemName: session.isRunning
+                          ? "dot.radiowaves.left.and.right"
+                          : "antenna.radiowaves.left.and.right.slash")
+                        .font(.system(size: 22, weight: .bold))
+                }
             }
 
-            // Row 2: action pills. Separated so the labels never wrap even
-            // on narrower phones (the header was squeezing to "PAI\nR" before).
-            HStack(spacing: 6) {
-                Spacer()
-                headerButton("PAIR") { showingPairing = true }
-                headerButton("CHAT", accent: DT.sys) { showingChat = true }
-                headerButton("SETTINGS") { showingSettings = true }
-                headerButton(session.isRunning ? "STOP" : "START",
-                             accent: session.isRunning ? DT.warn : DT.ok) {
-                    if session.isRunning { session.stop() }
-                    else { Task { await session.start() } }
+            tappableTile(action: { showingPairing = true }) {
+                StatusTile(
+                    title: "PAIR",
+                    subtitle: session.isPaired
+                        ? "FPRINT · \(session.keyFingerprint ?? "----")"
+                        : "NO KEY · TAP TO PAIR",
+                    accent: session.isPaired ? DT.ok : DT.warn,
+                    active: session.isPaired
+                ) {
+                    Image(systemName: session.isPaired ? "lock.shield.fill" : "lock.open")
+                        .font(.system(size: 22, weight: .bold))
+                }
+            }
+
+            tappableTile(action: { showingPeers = true }) {
+                StatusTile(
+                    title: "PEER",
+                    subtitle: peerSubtitle,
+                    accent: DT.sys,
+                    active: session.selectedPeer != nil
+                ) {
+                    Image(systemName: session.selectedPeer != nil
+                          ? "iphone.gen3.radiowaves.left.and.right"
+                          : "iphone.slash")
+                        .font(.system(size: 22, weight: .bold))
                 }
             }
         }
     }
 
-    private func headerButton(_ title: String,
-                              accent: Color = DT.info,
-                              action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .walkieLabel(11)
-                .foregroundStyle(accent)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .overlay(
-                    Rectangle().strokeBorder(accent.opacity(0.6), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Status tiles
-
-    private var statusTiles: some View {
-        // `.top` alignment: one tile's subtitle may wrap to two lines while
-        // another stays at one — without this the HStack centers each tile
-        // vertically and the short ones sag below the tall ones.
-        HStack(alignment: .top, spacing: 10) {
-            StatusTile(
-                title: "LINK",
-                subtitle: session.isRunning ? "STACK UP · BONJOUR ACTIVE" : "TAP START TO GO LIVE",
-                accent: DT.info,
-                active: session.isRunning
-            ) {
-                Image(systemName: session.isRunning ? "dot.radiowaves.left.and.right" : "antenna.radiowaves.left.and.right.slash")
-                    .font(.system(size: 22, weight: .bold))
-            }
-
-            StatusTile(
-                title: "PAIR",
-                // Show the fingerprint here so two paired phones can be
-                // verified at a glance — both should read the same hex groups.
-                subtitle: session.isPaired
-                    ? "FPRINT · \(session.keyFingerprint ?? "----")"
-                    : "NO KEY · PAIR TO ENCRYPT",
-                accent: session.isPaired ? DT.ok : DT.warn,
-                active: session.isPaired
-            ) {
-                Image(systemName: session.isPaired ? "lock.shield.fill" : "lock.open")
-                    .font(.system(size: 22, weight: .bold))
-            }
-
-            StatusTile(
-                title: "PEER",
-                subtitle: peerSubtitle,
-                accent: DT.sys,
-                active: session.selectedPeer != nil
-            ) {
-                Image(systemName: session.selectedPeer != nil ? "iphone.gen3.radiowaves.left.and.right" : "iphone.slash")
-                    .font(.system(size: 22, weight: .bold))
-            }
-        }
+    /// Wraps a `StatusTile` in a plain button so the whole tile becomes
+    /// a tap target. Keeps `StatusTile` a pure display component.
+    private func tappableTile<Content: View>(action: @escaping () -> Void,
+                                             @ViewBuilder content: () -> Content) -> some View {
+        Button(action: action) { content() }
+            .buttonStyle(.plain)
+            .contentShape(.rect)
     }
 
     private var peerSubtitle: String {
@@ -191,9 +208,27 @@ struct ContentView: View {
             return "TARGET · \(peer.name.uppercased())"
         }
         if session.directory.peers.isEmpty {
-            return "NO PEERS IN RANGE"
+            return "NO PEERS · TAP TO RESCAN"
         }
-        return "\(session.directory.peers.count) SEEN · SELECT ONE"
+        return "\(session.directory.peers.count) SEEN · TAP TO PICK"
+    }
+
+    private func toggleRunning() {
+        if session.isRunning {
+            session.stop()
+        } else {
+            Task { await session.start() }
+        }
+    }
+
+    /// Flushes whatever the listen sheet decoded into the session's RX
+    /// scroll as a single morse entry, then resets the buffer.
+    private func flushDecodedListenBuffer() {
+        let trimmed = decodedListenBuffer.trimmingCharacters(in: .whitespaces)
+        if !trimmed.isEmpty {
+            session.appendDecodedMorse(trimmed)
+        }
+        decodedListenBuffer.removeAll()
     }
 
     // MARK: - Diagnostic strip
@@ -231,16 +266,35 @@ struct ContentView: View {
 
     private var hintContent: (msg: String, color: Color) {
         if !session.isRunning {
-            return ("SYSTEM HALTED · PRESS START", DT.textDim)
+            return ("SYSTEM HALTED · TAP LINK TO GO LIVE", DT.textDim)
         }
         if !session.isPaired {
-            return ("PAIR REQUIRED · TAP PAIR → SHOW CODE", DT.warn)
+            return ("PAIR REQUIRED · TAP PAIR TILE", DT.warn)
         }
         if session.selectedPeer == nil {
-            return ("SELECT PEER FROM LIST TO ARM TRANSMIT", DT.info)
+            return ("SELECT PEER · TAP PEER TILE", DT.info)
         }
         let name = session.selectedPeer!.name.uppercased()
         return ("HOLD TRANSMIT · LINK SECURE TO \(name)", DT.ok)
+    }
+
+    // MARK: - PTT button (pinned bottom)
+
+    private var pttButton: some View {
+        PTTButton(
+            isTransmitting: session.isTransmitting,
+            isEnabled: canTransmit,
+            outboundLevel: session.outboundLevel,
+            inboundLevel: session.inboundLevel,
+            onBegin: {
+                session.playPressSound()
+                session.beginTransmit()
+            },
+            onEnd: {
+                session.playReleaseSound()
+                session.endTransmit()
+            }
+        )
     }
 
     private var canTransmit: Bool {
@@ -263,6 +317,52 @@ private struct DiagCell: View {
                 .foregroundStyle(valueColor)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Modal peer-list sheet. The peer list used to fill the main screen;
+/// now it lives here, reachable via the PEER tile, and closes itself
+/// once a peer is picked so the user lands back on the PTT screen
+/// ready to transmit.
+struct PeerListSheet: View {
+    @ObservedObject var session: PTTSession
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            DT.bg.ignoresSafeArea()
+            VStack(spacing: 14) {
+                HStack {
+                    Text("PEERS")
+                        .walkieLabel(13, weight: .heavy, tracking: 3)
+                        .foregroundStyle(DT.text)
+                    Spacer()
+                    Button("CLOSE") { dismiss() }
+                        .font(DT.mono(11, weight: .bold))
+                        .tracking(DT.labelTracking)
+                        .foregroundStyle(DT.textDim)
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
+                        .buttonStyle(.plain)
+                }
+                TerminalFrame("DISCOVERED") {
+                    PeerListView(directory: session.directory,
+                                 selectedPeer: Binding(
+                                    get: { session.selectedPeer },
+                                    set: { new in
+                                        session.selectedPeer = new
+                                        // Close on pick so the user drops
+                                        // back to the PTT screen.
+                                        if new != nil { dismiss() }
+                                    }
+                                 ))
+                }
+                .frame(maxHeight: .infinity)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .preferredColorScheme(.dark)
     }
 }
 

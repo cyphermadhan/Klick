@@ -26,8 +26,6 @@ struct ChatView: View {
     @AppStorage("chat.sendAsMorse") private var sendAsMorse: Bool = false
 
     @State private var draft: String = ""
-    @State private var showingListen = false
-    @State private var decodedBuffer: String = ""
     @FocusState private var composerFocused: Bool
 
     @Environment(\.dismiss) private var dismiss
@@ -75,20 +73,6 @@ struct ChatView: View {
             tone.stop()
             beacon.stop()
         }
-        .sheet(isPresented: $showingListen) {
-            ListenView(onCharacter: { char in
-                decodedBuffer.append(char)
-            })
-            .onDisappear {
-                // On close, commit the decoded buffer as a received
-                // morse entry so it joins the normal RX scroll.
-                let trimmed = decodedBuffer.trimmingCharacters(in: .whitespaces)
-                if !trimmed.isEmpty {
-                    session.appendDecodedMorse(trimmed)
-                }
-                decodedBuffer.removeAll()
-            }
-        }
     }
 
     // MARK: - Header
@@ -109,10 +93,6 @@ struct ChatView: View {
                 .foregroundStyle(DT.text)
 
             Spacer()
-
-            headerPill(title: "LISTEN", icon: "ear.fill", accent: DT.sys) {
-                showingListen = true
-            }
 
             headerPill(title: "CLEAR", accent: DT.warn) {
                 draft.removeAll()
