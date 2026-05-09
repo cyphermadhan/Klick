@@ -31,14 +31,25 @@ struct MorseView: View {
     @State private var commitTimer: Task<Void, Never>?
     /// Pending touch state for TAP mode.
     @State private var tapDownAt: Date?
+    /// Set to true once the current TAP hold has crossed the dah threshold,
+    /// so the key can flip its label from `DIT` to `DAH` before release.
+    @State private var tapCrossedDah: Bool = false
+    /// Task that flips `tapCrossedDah` after the threshold elapses.
+    @State private var tapThresholdTask: Task<Void, Never>?
 
     @Environment(\.dismiss) private var dismiss
 
     /// Auto-commit window. After this many ms of no dit/dah, the current
     /// path commits to a letter. Twice this is a word gap commit.
     private let autoCommitMs: Int = 600
-    /// Boundary between dit and dah press in TAP mode.
-    private let tapDahThreshold: TimeInterval = 0.15
+
+    /// Dit/dah boundary in TAP mode, derived from current WPM per the
+    /// standard CW rule: a press ≥ 1.5 dit-units is a dah. At 12 WPM one
+    /// unit is 100 ms, giving the traditional 150 ms; slow learners
+    /// (5 WPM) get 360 ms, fast keyers (30 WPM) get 60 ms.
+    private var tapDahThreshold: TimeInterval {
+        (1.2 / Double(wpm)) * 1.5
+    }
 
     var body: some View {
         ZStack {
@@ -81,6 +92,7 @@ struct MorseView: View {
             tone.stop()
             beacon.stop()
             commitTimer?.cancel()
+            tapThresholdTask?.cancel()
         }
     }
 
@@ -222,31 +234,60 @@ struct MorseView: View {
     }
 
     private var tapKey: some View {
-        Rectangle()
-            .fill(tapDownAt == nil ? DT.panel : DT.info.opacity(0.25))
-            .overlay(Rectangle().strokeBorder(DT.info, lineWidth: 1))
+        // Key face reflects the current hold state: "KEY" when idle,
+        // "DIT" while the press is below threshold, "DAH" once past. This
+        // removes the mystery of how long is long enough — learners can
+        // release as soon as they see the state they wanted.
+        let (label, accent): (String, Color) = {
+            guard tapDownAt != nil else { return ("KEY", DT.info) }
+            return tapCrossedDah ? ("DAH", DT.ok) : ("DIT", DT.warn)
+        }()
+        return Rectangle()
+            .fill(tapDownAt == nil ? DT.panel : accent.opacity(0.25))
+            .overlay(Rectangle().strokeBorder(accent, lineWidth: 1))
             .overlay(
-                Text("KEY")
+                Text(label)
                     .walkieLabel(12, weight: .heavy, tracking: 2)
-                    .foregroundStyle(DT.info)
+                    .foregroundStyle(accent)
             )
             .frame(maxWidth: .infinity)
+            .animation(.easeOut(duration: 0.08), value: tapCrossedDah)
+            .animation(.easeOut(duration: 0.08), value: tapDownAt)
             // DragGesture with minimumDistance: 0 is the reliable way to get
             // both press-down and release callbacks in SwiftUI.
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in
-                        if tapDownAt == nil { tapDownAt = Date() }
+                        if tapDownAt == nil { tapStart() }
                     }
                     .onEnded { _ in
-                        guard let start = tapDownAt else { return }
-                        let held = Date().timeIntervalSince(start)
-                        tapDownAt = nil
-                        if held >= tapDahThreshold { handleDah() } else { handleDit() }
+                        tapEnd()
                     }
             )
             .accessibilityLabel("Morse key")
             .accessibilityHint("Short press for dit, long press for dah")
+    }
+
+    private func tapStart() {
+        tapDownAt = Date()
+        tapCrossedDah = false
+        let threshold = tapDahThreshold
+        tapThresholdTask?.cancel()
+        tapThresholdTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(threshold))
+            guard !Task.isCancelled else { return }
+            tapCrossedDah = true
+        }
+    }
+
+    private func tapEnd() {
+        tapThresholdTask?.cancel()
+        tapThresholdTask = nil
+        guard let start = tapDownAt else { return }
+        let held = Date().timeIntervalSince(start)
+        tapDownAt = nil
+        tapCrossedDah = false
+        if held >= tapDahThreshold { handleDah() } else { handleDit() }
     }
 
     private var txButton: some View {

@@ -12,61 +12,54 @@ Phases ship in order, but each is self-contained and can be released on its own.
 
 ---
 
-## Current status — 2026-05-06 (uncommitted working-tree state)
+## Current status — 2026-05-09
 
-### Phase 1 — code complete, pending on-device verification
+### Phase 1 — shipped to `main` (`da1f0ae`), pending on-device verification
 
-All 11 implementation tasks ticked. Build green on iPhone 16 sim, full test suite passes (24 + 9 new PeerDirectory tests). Files added/modified:
+All 11 implementation tasks ticked. Build green on iPhone 16 sim, 33 tests pass in phase-1-only state.
 
-**New:** `Sources/Transport/AudioTransport.swift`, `Sources/Transport/MPCTransport.swift`,
-`Sources/Discovery/PeerDirectory.swift`, `Sources/Discovery/RangeMode.swift`,
-`Tests/KlickKlickTests/PeerDirectoryTests.swift`.
-
-**Modified:** `UDPTransport.swift` (now conforms to `AudioTransport`, absorbed Bonjour browsing),
-`PeerInfo.swift` (transport tag), `PTTSession.swift` (owns `[PeerTransport: AudioTransport]`),
-`PeerListView.swift` (binds to `PeerDirectory`, WIFI/NEAR pill),
-`ContentView.swift`, `SettingsView.swift` (RANGE MODE picker), `project.yml`
-(`NSBluetoothAlwaysUsageDescription`, Bonjour `_klick-ptt-v1._tcp./._udp.`),
-`UDPTransportTests.swift` (new API).
-
-**Deleted:** `Sources/Discovery/BonjourService.swift` (its browsing logic folded into `UDPTransport`).
+**Merged:** `AudioTransport` protocol + `UDPTransport` conformance (absorbed Bonjour), new `MPCTransport`, `PeerDirectory` merges peers from both transports, `RangeMode` user setting (defaults to `.both`), `WIFI`/`NEAR` pills in the peer list, KlickKlick rename (ITMS-90129 resolved), `NSBluetoothAlwaysUsageDescription` + `_klick-ptt-v1._tcp./._udp.` Bonjour types.
 
 **Deviations from the original Phase 1 plan:**
-- Default `RangeMode = .both`, not `.wifi`. Rationale in `RangeMode.swift` — upgrading users should get concert-range behavior without discovering a setting. Revisit after TestFlight field data.
+- Default `RangeMode = .both`, not `.wifi`. Upgrading users get concert-range behavior without discovering a setting. Revisit after TestFlight field data.
 - Same-name peer on two transports shows as two rows, not collapsed to a single `BOTH` tag. Collapse deferred to a polish pass.
 - `BonjourBrowser` deleted rather than renamed — its ~50 lines of `NWBrowser` setup moved inside `UDPTransport`, one file per transport.
 
 **Still open for Phase 1:**
-- [ ] Two-device smoke test (MPC doesn't work in simulator — needs real iPhones, airplane mode + Bluetooth on)
+- [ ] Two-device smoke test (MPC doesn't work in simulator — needs real iPhones, airplane mode + Bluetooth on). See the pre-merge testing checklist in the prior commit description.
 - [ ] Version bump to `MARKETING_VERSION 0.2.0`, `CURRENT_PROJECT_VERSION 3`
 
-### Phase 2 — in progress (4 of 11 tasks)
+### Phase 2 — shipped to `main` (`468e32c`, polish in `ac0300c`)
 
-- [x] `Sources/Morse/MorseCode.swift` — ITU alphabet (A–Z, 0–9, 18 punct), `encode → [MorseFrame]`, `decode → Character?`
-- [x] `Sources/Morse/MorseTree.swift` — traversal state machine, `currentPath` / `buffer` / `isOffTree` published, shape convention matches keychain photo (square = dah, circle = dit)
-- [x] `Tests/KlickKlickTests/MorseTests.swift` — 22 tests covering alphabet coverage, roundtrip, known sequences (SOS, word gap), edge cases (undefined, over-deep, undo). **Not yet run** — need xcodegen + build.
-- [x] `PacketType.morseText = 0x04` added to `PacketProtocol.swift` + wire roundtrip test in `PacketProtocolTests.swift`
+All 11 deliverables complete. 55 tests pass on iPhone 16 sim, build verified on iPhone SE (3rd gen) sim.
 
-**Next up (in order):**
-1. `Sources/Morse/MorseTone.swift` — sine-wave playback synth, WPM-configurable
-2. `Sources/Morse/FlashlightBeacon.swift` — torch pulses synced to Morse timing
-3. `Sources/UI/MorseTreeView.swift` — SwiftUI Canvas tree renderer with live node highlight
-4. `Sources/UI/MorseView.swift` — screen composition (TX buffer, RX buffer, tree, input row)
-5. `PTTSession` additions — send/receive `.morseText` routing, new `@Published incomingMorse` buffer
-6. `ContentView.swift` — add `MORSE` header pill next to `PAIR`/`SYS`
-7. Build + run full test suite (expect 46+ tests green)
+**Merged:**
+- `MorseCode` — ITU alphabet (A–Z, 0–9, 18 punctuation marks), `encode → [MorseFrame]`, `decode → Character?`
+- `MorseTree` — traversal state machine, published currentPath/buffer/isOffTree, shape matches keychain reference (square = dah, circle = dit)
+- `MorseTone` — standalone `AVAudioEngine`, 600 Hz sine sidetone with 5 ms raised-cosine ramps, WPM clamped [5, 40]
+- `FlashlightBeacon` — `AVCaptureDevice.torchMode` pulses, 15 Hz switch cap, simulator-safe no-op
+- `MorseTreeView` — SwiftUI `Canvas` full alphabet: depth 1–4 letters (18 pt, 9 pt label), depth 5 digits (14 pt, 7 pt label), depth 6 punctuation (10 pt marker-only). Active-path terminal sizes per depth.
+- `MorseView` — TX/RX frames, tree, KEY or TAP input. VoiceOver labels + `updatesFrequently` trait on the buffers. TAP mode threshold is WPM-derived (1.5 dit-units) and the key face shows `DIT`/`DAH` live while held.
+- Packet type `0x04 morseText`, `AudioTransport.sendText` (UDP best-effort, MPC reliable)
+- `PTTSession.sendMorse` + `.morseText` routing, bounded `morseHistory` scrollback, transient `incomingMorse` publisher
+- `ContentView` — magenta `MORSE` pill between PAIR and SYS
+- `MorseTests` (22) + morseText roundtrip test
+
+**Still open for Phase 2:**
+- [ ] Real-device VoiceOver walkthrough — the structural labels are in, but a live-with-screen-reader pass on a phone would catch any awkward phrasing
+- [ ] Peer-row collapse for same-name peers on multiple transports (inherited from Phase 1 polish)
 
 ### How to pick this up next session
 
 ```bash
 cd /Users/mraj/Documents/GitHub/Klick
-xcodegen generate     # picks up new Morse/ files
+xcodegen generate
 xcodebuild -project KlickKlick.xcodeproj -scheme KlickKlick \
   -destination 'platform=iOS Simulator,id=6110AA28-5BAA-4938-A9B9-112261D009CC' \
   test
 ```
 
-Pick up the Phase 2 task list from task 16 in the in-session tracker, or from the 7-item "next up" checklist above. No uncommitted state in git per user direction — everything is in the working tree.
+Next major piece is **Phase 3 — LoRa text bridge**. See §Phase 3 below. Estimated 5–8 days + hardware (Meshtastic-compatible radio) for end-to-end verification.
 
 ---
 
@@ -274,12 +267,12 @@ Optional future packet type `0x05 morse_events` for live per-dit streaming (feel
 
 - [x] `Sources/Morse/MorseCode.swift` — encode/decode, ITU international set (letters + digits + common punctuation). Extended chars (Ä/Ö/Ü/CH) and Q-codes deferred — no wire-format impact.
 - [x] `Sources/Morse/MorseTree.swift` — traversal state machine shared between input and visualization
-- [ ] `Sources/Morse/MorseTone.swift` — audio synthesis at configurable WPM (extend `WalkieSoundSynth`)
-- [ ] `Sources/Morse/FlashlightBeacon.swift` — torch-backed visual output
-- [ ] `Sources/UI/MorseView.swift` — screen, tree rendering, input row
-- [ ] `Sources/UI/MorseTreeView.swift` — pure-SwiftUI Canvas-based tree with node animation
+- [x] `Sources/Morse/MorseTone.swift` — standalone `AVAudioEngine`, 600 Hz sidetone with 5 ms raised-cosine ramps, WPM clamped [5, 40]
+- [x] `Sources/Morse/FlashlightBeacon.swift` — `AVCaptureDevice.torchMode` pulses, 15 Hz switch cap, simulator-safe
+- [x] `Sources/UI/MorseView.swift` — TX/RX frames, tree, KEY / TAP input, WPM stepper, FLASH toggle, VoiceOver support; TAP threshold WPM-derived, key face flips DIT→DAH live
+- [x] `Sources/UI/MorseTreeView.swift` — SwiftUI `Canvas`, full alphabet to depth 6 (letters labelled, digits small-label, punctuation marker-only), live active-path overlay
 - [x] Packet type `0x04 morseText`, wire tests (`PacketProtocolTests.testMorseTextRoundtrip`)
-- [ ] `PTTSession` routing: incoming morse → `MorseView`'s RX buffer
+- [x] `PTTSession` routing: `sendMorse` for TX, `.morseText` decrypt + `morseHistory` append + `incomingMorse` publisher for beep/flash replay
 - [x] Unit tests: encode/decode roundtrip for all defined ITU characters; tree state-machine invariants (`MorseTests.swift`, 22 tests)
 
 ### Estimated scope
