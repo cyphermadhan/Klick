@@ -86,15 +86,15 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         }
 
         let input = engine.inputNode
-        // `inputNode.outputFormat(forBus:0)` can return a zeroed-out
-        // format before the session is fully up — installing a tap with
-        // that throws "required condition is false: format.sampleRate != 0"
-        // and crashes. Use the hardware's actual input format, falling
-        // back to nil (which tells AVAudioEngine to pick for itself).
-        let hwFormat = input.inputFormat(forBus: 0)
-        let tapFormat: AVAudioFormat? = hwFormat.sampleRate > 0 ? hwFormat : nil
-        if tapFormat == nil {
-            log.error("Audio input format unavailable; aborting listen")
+        // `outputFormat(forBus: 0)` is the format the tap callback
+        // receives. It can come back zeroed-out if the session isn't
+        // actually routed to the mic yet — installing a tap with a
+        // zero sample rate throws "required condition is false:
+        // format.sampleRate != 0" and crashes hard. Guard on all the
+        // fields that matter, not just sampleRate.
+        let hwFormat = input.outputFormat(forBus: 0)
+        guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0 else {
+            log.error("Audio input format invalid (sr=\(hwFormat.sampleRate) ch=\(hwFormat.channelCount)); aborting listen")
             return
         }
         // Capture the real sample rate, recompute Goertzel coefficient
@@ -107,7 +107,7 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         // Defensive remove in case a prior start() left a tap behind
         // (can happen if engine.start threw after installTap succeeded).
         input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: tapFormat) { [weak self] buffer, _ in
+        input.installTap(onBus: 0, bufferSize: 1024, format: hwFormat) { [weak self] buffer, _ in
             self?.processBuffer(buffer)
         }
         do {
@@ -191,9 +191,18 @@ final class AudioToneDecoder: NSObject, ObservableObject {
             // we're computing. If this never appears, the tap isn't
             // running; if it shows flat zeros, the Goertzel input is
             // silent (session routed away from the mic).
+            //
+            // Hand-formatted via String(format:) rather than OSLog's
+            // `.fixed(precision:)` interpolation — that path crashed
+            // on some device/OS combos (EXC_BREAKPOINT inside the
+            // log interpolation machinery) and none of this is worth
+            // crashing the app over a debug line.
             tapFrameCount += 1
             if tapFrameCount % 25 == 0 {
-                log.debug("tap frame \(self.tapFrameCount) pwr=\(power, format: .fixed(precision: 5)) noise=\(self.noiseFloor, format: .fixed(precision: 5)) on=\(self.signalIsOn)")
+                let msg = String(format: "tap frame %d pwr=%.5f noise=%.5f on=%@",
+                                 tapFrameCount, power, noiseFloor,
+                                 signalIsOn ? "YES" : "no")
+                log.debug("\(msg, privacy: .public)")
             }
         }
     }
