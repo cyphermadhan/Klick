@@ -142,17 +142,23 @@ final class MPCTransport: NSObject, AudioTransport, @unchecked Sendable {
         }
     }
 
-    func sendText(_ type: PacketType, payload: Data, nonce: Data, to peer: PeerInfo) {
-        guard peer.transport == .nearby else { return }
+    @discardableResult
+    func sendText(_ type: PacketType, payload: Data, nonce: Data, to peer: PeerInfo) -> UInt32? {
+        guard peer.transport == .nearby else { return nil }
+        // Pre-assign sequence synchronously so it's returned in time for
+        // delivery-tracking bookkeeping in the caller.
+        let seq: UInt32 = queue.sync {
+            self.outgoingSequence &+= 1
+            return self.outgoingSequence
+        }
         queue.async { [weak self] in
             guard let self,
                   let session = self.session,
                   let mcPeer = self.peersByName[peer.name] else { return }
             guard session.connectedPeers.contains(mcPeer) else { return }
-            self.outgoingSequence &+= 1
             let pkt = Packet(
                 type: type,
-                sequence: self.outgoingSequence,
+                sequence: seq,
                 timestampMs: Packet.currentTimestampMs(),
                 nonce: nonce,
                 payload: payload
@@ -166,6 +172,7 @@ final class MPCTransport: NSObject, AudioTransport, @unchecked Sendable {
                 self.log.error("MPC text send failed: \(String(describing: error))")
             }
         }
+        return seq
     }
 
     // MARK: - Private

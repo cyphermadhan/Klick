@@ -16,6 +16,11 @@ import SwiftUI
 /// `incomingMorse` — chat arrivals are silent.
 struct ChatView: View {
     @ObservedObject var session: PTTSession
+    /// Mesh delivery state for outgoing rows. Explicit observation
+    /// (rather than reading through `session`) is needed because the
+    /// tracker is its own `ObservableObject` — SwiftUI wouldn't re-render
+    /// on its publishes if we only held the session.
+    @ObservedObject var tracker: MessageDeliveryTracker
 
     @StateObject private var tree = MorseTree()
     @StateObject private var tone = MorseTone()
@@ -215,11 +220,32 @@ struct ChatView: View {
             Text(entry.text)
                 .foregroundStyle(DT.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            deliveryGlyph(for: entry)
         }
         .font(DT.mono(11))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(entry.isIncoming ? "Received" : "Sent") \(entry.kind.rawValue)")
         .accessibilityValue(entry.text)
+    }
+
+    /// Small status glyph shown at the end of outgoing rows whose delivery
+    /// is being tracked (mesh only). Incoming rows and non-mesh sends get
+    /// nothing — no need for a green ✓ on every WiFi message.
+    @ViewBuilder
+    private func deliveryGlyph(for entry: TextEntry) -> some View {
+        // Reading `tracker.stateVersion` here is enough for SwiftUI to
+        // re-render this row when delivery state changes — the tracker
+        // is `@ObservedObject` above so `stateVersion` bumps propagate.
+        let _ = tracker.stateVersion
+        if !entry.isIncoming, let state = tracker.state(entryId: entry.id) {
+            switch state {
+            case .sending:   Text("…").foregroundStyle(DT.textDim)
+            case .delivered: Text("✓").foregroundStyle(DT.ok)
+            case .failed:    Text("✗").foregroundStyle(DT.tx)
+            case .timedOut:  Text("⏲").foregroundStyle(DT.warn)
+            case .sent:      EmptyView()
+            }
+        }
     }
 
     // MARK: - CHAT mode

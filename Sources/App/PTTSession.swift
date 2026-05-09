@@ -65,6 +65,15 @@ final class PTTSession: ObservableObject {
     /// LoRa radio pair + connection state. Phase 3b.1 owns the model;
     /// Phase 3b.2 will add the BLE client that mutates it.
     let radio = RadioState()
+    /// Per-mesh-message delivery state. Observed by `ChatView` to render
+    /// a ✓ / ⏲ / ✗ glyph next to outbound mesh rows. No-op for WiFi / MPC
+    /// sends (those complete terminally as `.sent` without tracking).
+    let deliveryTracker = MessageDeliveryTracker()
+    /// Link used by `LoRaBridge`. Injected here (not inside the bridge)
+    /// so Phase 3b.2b can swap `FakeMeshtasticLink` → the real CoreBluetooth
+    /// impl with one line. Phase 3b.2a leaves it as a fake that never
+    /// connects, so `.mesh` sends fall through to the "not connected" path.
+    var meshLink: MeshtasticLink = FakeMeshtasticLink()
     private let crypto = CryptoService()
     private let pairing = PairingService()
     private let sounds = WalkieSoundSynth()
@@ -129,6 +138,12 @@ final class PTTSession: ObservableObject {
                 try mpc.start(advertisingAs: name)
                 startedTransports[.nearby] = mpc
             }
+            if mode.includesMesh {
+                let mesh = LoRaBridge(link: meshLink)
+                wireTransport(mesh)
+                try mesh.start(advertisingAs: name)
+                startedTransports[.mesh] = mesh
+            }
         } catch {
             errorMessage = "Network start failed: \(error.localizedDescription)"
             startedTransports.values.forEach { $0.stop() }
@@ -154,6 +169,7 @@ final class PTTSession: ObservableObject {
         directory.clear()
         directory.isBrowsing = false
         sounds.stop()
+        deliveryTracker.reset()
         isRunning = false
     }
 
@@ -198,14 +214,51 @@ final class PTTSession: ObservableObject {
               let transport = transports[peer.transport] else { return }
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
+
+        // Mesh-specific pre-checks. A mismatched hardware region would
+        // have us transmitting illegally; an unset region or disconnected
+        // radio means the write would just drop. Surface both so the UI
+        // can show what's wrong instead of a silent no-op.
+        if peer.transport == .mesh {
+            if let blocker = meshSendBlocker() {
+                errorMessage = blocker
+                log.error("Mesh send blocked: \(blocker, privacy: .public)")
+                return
+            }
+        }
+
         let bytes = Data(trimmed.utf8)
         do {
             let (ciphertext, nonce) = try crypto.seal(bytes, key: key)
-            transport.sendText(packetType, payload: ciphertext, nonce: nonce, to: peer)
+            let seq = transport.sendText(packetType, payload: ciphertext, nonce: nonce, to: peer)
             packetsSent &+= 1
-            appendText(TextEntry(text: trimmed, kind: kind, isIncoming: false))
+            let entry = TextEntry(text: trimmed, kind: kind, isIncoming: false, sequence: seq)
+            appendText(entry)
+            // Only mesh sends go through delivery tracking — WiFi/MPC
+            // semantics give the user faster implicit feedback.
+            if peer.transport == .mesh, let seq {
+                deliveryTracker.record(seq: seq, entryId: entry.id)
+            }
         } catch {
             log.error("Text encrypt failed: \(String(describing: error))")
+        }
+    }
+
+    /// Returns a non-nil blocker string when a mesh send shouldn't proceed.
+    /// Covers three cases: no radio connected, region mismatch with the
+    /// paired radio, or hardware region unset.
+    private func meshSendBlocker() -> String? {
+        guard radio.isConnected else {
+            return "No radio connected. Open Settings → Radio to pair."
+        }
+        let hardwarePreset = radio.displayInfo?.regionPreset
+        switch RegionStore.current.compareToHardware(preset: hardwarePreset) {
+        case .ok:
+            return nil
+        case .hardwareUnset:
+            return "Radio region is unset. Flash a region in the Meshtastic app before transmitting."
+        case .mismatch(let user, let hw):
+            return "Region mismatch: you selected \(user.displayName) but the radio is \(hw). TX blocked."
         }
     }
 
@@ -320,10 +373,17 @@ final class PTTSession: ObservableObject {
         case .chatText:
             handleIncomingText(packet, kind: .chat, replayAsBeeps: false)
         case .ack:
-            // Delivery ack — logged but not yet wired into a UI status.
-            // Phase 3b will add per-message "sending/delivered" state that
-            // reads this to flip indicators.
-            log.info("Received ack for seq \(packet.payload.hexPrefix, privacy: .public)")
+            // Payload is the 4-byte BE sequence being acknowledged. Less
+            // than 4 bytes means a malformed ack — ignore.
+            guard packet.payload.count == 4 else {
+                packetsDropped &+= 1
+                return
+            }
+            let ackedSeq: UInt32 = packet.payload.withUnsafeBytes { raw in
+                UInt32(bigEndian: raw.load(as: UInt32.self))
+            }
+            deliveryTracker.acknowledge(seq: ackedSeq)
+            packetsReceived &+= 1
         case .ping:
             // Auto-respond with a pong so callers can use it for reachability checks.
             // No payload, no sequence coordination needed in M6.
@@ -335,8 +395,9 @@ final class PTTSession: ObservableObject {
 }
 
 /// One entry in the Chat/Morse scrollback. `kind` drives the prefix glyph
-/// (dit/dah for Morse, none for Chat) and `isIncoming` the arrow direction
-/// in `ChatView`.
+/// (dit/dah for Morse, none for Chat), `isIncoming` the arrow direction,
+/// and `sequence` (outgoing-only) links back to `MessageDeliveryTracker`
+/// so the UI can show a live ✓ / ⏲ / ✗ glyph per sent row.
 struct TextEntry: Identifiable, Equatable, Sendable {
     enum Kind: String, Sendable, Codable {
         case morse
@@ -347,12 +408,16 @@ struct TextEntry: Identifiable, Equatable, Sendable {
     let text: String
     let kind: Kind
     let isIncoming: Bool
-}
+    /// The wire `Packet.sequence` used when sending this entry. Only set
+    /// for outgoing messages — incoming entries leave it `nil`.
+    /// `ChatView` uses this to look up delivery state in the tracker.
+    let sequence: UInt32?
 
-private extension Data {
-    /// Short hex dump used for log lines where we want to identify a packet
-    /// without spamming the whole payload.
-    var hexPrefix: String {
-        prefix(8).map { String(format: "%02x", $0) }.joined()
+    init(text: String, kind: Kind, isIncoming: Bool, sequence: UInt32? = nil) {
+        self.text = text
+        self.kind = kind
+        self.isIncoming = isIncoming
+        self.sequence = sequence
     }
 }
+

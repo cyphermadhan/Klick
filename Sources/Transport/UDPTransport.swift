@@ -143,8 +143,16 @@ final class UDPTransport: AudioTransport, @unchecked Sendable {
         }
     }
 
-    func sendText(_ type: PacketType, payload: Data, nonce: Data, to peer: PeerInfo) {
-        guard peer.transport == .wifi else { return }
+    @discardableResult
+    func sendText(_ type: PacketType, payload: Data, nonce: Data, to peer: PeerInfo) -> UInt32? {
+        guard peer.transport == .wifi else { return nil }
+        // Pre-assign the sequence on the caller's thread so it can be
+        // returned immediately — callers (PTTSession) use it to key
+        // delivery-tracking before the async write completes.
+        let seq: UInt32 = queue.sync {
+            self.outgoingSequence &+= 1
+            return self.outgoingSequence
+        }
         queue.async { [weak self] in
             guard let self else { return }
             let endpoint = peer.endpoint ?? self.endpointsByName[peer.name]
@@ -152,16 +160,16 @@ final class UDPTransport: AudioTransport, @unchecked Sendable {
                 self.log.error("sendText: no endpoint for peer \(peer.name, privacy: .public)")
                 return
             }
-            self.outgoingSequence &+= 1
             let pkt = Packet(
                 type: type,
-                sequence: self.outgoingSequence,
+                sequence: seq,
                 timestampMs: Packet.currentTimestampMs(),
                 nonce: nonce,
                 payload: payload
             )
             self.sendInternal(pkt, to: endpoint)
         }
+        return seq
     }
 
     /// Back-door used by tests + Phase 0 diagnostics to send a raw Packet.

@@ -12,12 +12,16 @@ enum PeerTransport: String, Sendable, Hashable {
     /// MultipeerConnectivity over Bluetooth + peer-to-peer WiFi (AWDL).
     /// Works with no router / no cell.
     case nearby
+    /// External Meshtastic-compatible LoRa radio paired over BLE.
+    /// Text-only (voice doesn't fit in the bandwidth); kilometer range.
+    case mesh
 
     /// Short label shown on peer list rows.
     var tag: String {
         switch self {
         case .wifi:   return "WIFI"
         case .nearby: return "NEAR"
+        case .mesh:   return "MESH"
         }
     }
 }
@@ -57,7 +61,13 @@ protocol AudioTransport: AnyObject {
     /// Transports that have a reliability dial (MPC) SHOULD use their
     /// reliable mode here — text is small and latency-tolerant, unlike
     /// voice. UDP just keeps sending best-effort; callers retry if needed.
-    func sendText(_ type: PacketType, payload: Data, nonce: Data, to peer: PeerInfo)
+    ///
+    /// Returns the `Packet.sequence` that was put on the wire, or `nil` if
+    /// the send was not performed (e.g. the link isn't connected). Mesh
+    /// senders use this return to index delivery-tracking; UDP/MPC callers
+    /// can ignore it.
+    @discardableResult
+    func sendText(_ type: PacketType, payload: Data, nonce: Data, to peer: PeerInfo) -> UInt32?
 
     /// Delivered for every inbound `Packet` the transport successfully
     /// decodes off the wire. Wire-level crypto lives one level up in
