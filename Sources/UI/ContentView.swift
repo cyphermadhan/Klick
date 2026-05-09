@@ -112,35 +112,48 @@ struct ContentView: View {
     // MARK: - Nav pills (TALK / CHAT / LISTEN / SETTINGS)
 
     private var navPills: some View {
-        HStack(spacing: 6) {
-            navPill(title: "TALK", icon: "dot.radiowaves.left.and.right",
-                    accent: DT.ok, active: true, action: {})
-            navPill(title: "CHAT", icon: "bubble.left.fill",
-                    accent: DT.sys, active: false) { showingChat = true }
-            navPill(title: "LISTEN", icon: "ear.fill",
-                    accent: DT.info, active: false) { showingListen = true }
-            navPill(title: "SETTINGS", icon: "slider.horizontal.3",
-                    accent: DT.textDim, active: false) { showingSettings = true }
+        // ScrollView is the safety net: on iPhone SE 8-char "SETTINGS"
+        // plus three other icon+text pills is tight. Each pill sizes to
+        // its own content rather than sharing equal width, so labels
+        // never wrap onto a second line.
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                navPill(title: "TALK", icon: "dot.radiowaves.left.and.right",
+                        accent: DT.ok, active: true, action: {})
+                navPill(title: "CHAT", icon: "bubble.left.fill",
+                        accent: DT.sys, active: false) { showingChat = true }
+                navPill(title: "LISTEN", icon: "ear.fill",
+                        accent: DT.info, active: false) { showingListen = true }
+                navPill(title: "SETTINGS", icon: "slider.horizontal.3",
+                        accent: DT.textDim, active: false) { showingSettings = true }
+            }
         }
+        .frame(height: 34)
     }
 
-    /// Uniform icon+text pill. All four have the same height and padding
-    /// so the nav row reads as one consistent control strip rather than
-    /// a mix of text-only and icon-bearing buttons like before.
+    /// Uniform icon+text pill. Active state uses a subtle tinted
+    /// background + solid border instead of inverted colors — that
+    /// swap lost contrast against the green TALK accent (black on
+    /// bright green rendered text effectively invisible on some
+    /// displays). Now active = 20% fill + full-opacity border + text
+    /// in accent color, same readability as inactive.
     private func navPill(title: String, icon: String, accent: Color,
                          active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 11, weight: .bold))
-                Text(title).walkieLabel(10)
+                Text(title)
+                    .walkieLabel(10)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
-            .foregroundStyle(active ? DT.bg : accent)
+            .foregroundStyle(accent)
             .padding(.horizontal, 10)
-            .frame(maxWidth: .infinity)
             .frame(height: 32)
-            .background(active ? accent : Color.clear)
-            .overlay(Rectangle().strokeBorder(accent.opacity(active ? 1 : 0.6), lineWidth: 1))
+            .background(active ? accent.opacity(0.20) : Color.clear)
+            .overlay(Rectangle().strokeBorder(accent.opacity(active ? 1 : 0.6),
+                                              lineWidth: active ? 1.5 : 1))
         }
         .buttonStyle(.plain)
         .disabled(active) // TALK is the current screen — disable interaction
