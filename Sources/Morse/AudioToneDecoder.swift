@@ -37,11 +37,15 @@ final class AudioToneDecoder: NSObject, ObservableObject {
     private var sampleRate: Double = 48_000
     private var windowSamples: Int = 960
 
-    /// Rolling noise estimate. Threshold floats above this so a loud
-    /// room doesn't blind the detector.
-    private var noiseFloor: Double = 0.001
-    private var onThreshold: Double { noiseFloor * 8 + 0.005 }
-    private var offThreshold: Double { noiseFloor * 4 + 0.002 }
+    /// Rolling noise estimate (per-sample squared magnitude in the
+    /// target bin). Threshold floats above this so a loud room doesn't
+    /// blind the detector, but never drops below the absolute floor —
+    /// otherwise a dead-quiet booth collapses noise estimate to zero and
+    /// the first faint breath of the target tone already reads as "on".
+    private var noiseFloor: Double = 0.0005
+    private static let minNoiseFloor: Double = 0.0002
+    private var onThreshold: Double { max(noiseFloor * 4, 0.003) }
+    private var offThreshold: Double { max(noiseFloor * 2, 0.0015) }
 
     /// Goertzel coefficient = 2·cos(2π·f/Fs). Recomputed when we learn
     /// the hardware's real sample rate at start.
@@ -158,13 +162,21 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         }
     }
 
+    /// Counter used to log a sample of frames for diagnostics rather
+    /// than every single one (300 fps would flood the log).
+    private var tapFrameCount: Int = 0
+
     private func appendAndEvaluate(_ newSamples: [Float]) {
         windowBuffer.append(contentsOf: newSamples)
         while windowBuffer.count >= windowSamples {
             let window = Array(windowBuffer.prefix(windowSamples))
             windowBuffer.removeFirst(windowSamples)
             let power = goertzelPower(window)
-            currentLevel = min(1.0, power * 4) // scale for display
+            // Scale for display: the bar should be visible at ambient
+            // levels, not just when the detector has crossed threshold.
+            // 40× puts typical room-quiet power around 0.02 and a clear
+            // 600 Hz tone well past the bar's top.
+            currentLevel = min(1.0, power * 40)
             updateNoiseFloor(power)
             let nowMs = Date().timeIntervalSince1970 * 1000
             if !signalIsOn && power >= onThreshold {
@@ -174,6 +186,15 @@ final class AudioToneDecoder: NSObject, ObservableObject {
                 signalIsOn = false
                 demod.signalDidGoOff(at: nowMs)
             }
+            // Diagnostic trail — one line per ~500 ms so the log stays
+            // skimmable. Shows whether the tap is firing AND what power
+            // we're computing. If this never appears, the tap isn't
+            // running; if it shows flat zeros, the Goertzel input is
+            // silent (session routed away from the mic).
+            tapFrameCount += 1
+            if tapFrameCount % 25 == 0 {
+                log.debug("tap frame \(self.tapFrameCount) pwr=\(power, format: .fixed(precision: 5)) noise=\(self.noiseFloor, format: .fixed(precision: 5)) on=\(self.signalIsOn)")
+            }
         }
     }
 
@@ -181,12 +202,23 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         // Only adapt when we're in the off state — don't let a long
         // dah drag the floor up and kill subsequent detection.
         guard !signalIsOn else { return }
-        noiseFloor = 0.9 * noiseFloor + 0.1 * power
+        let adapted = 0.9 * noiseFloor + 0.1 * power
+        noiseFloor = max(Self.minNoiseFloor, adapted)
     }
 
     /// Classic Goertzel: single-bin DFT via a 2-tap IIR resonator.
-    /// Returns power normalized to window size so thresholds are
-    /// invariant to window length.
+    ///
+    /// Returns the raw bin magnitude-squared divided by window size
+    /// so thresholds are invariant to the specific window length we
+    /// end up at on different hardware sample rates. The previous
+    /// implementation divided by `N²`, which squashed even clear
+    /// tones (~0.05 amplitude) below any usable threshold.
+    ///
+    /// For a pure sine at the target frequency with peak amplitude A
+    /// sampled over N points: `s1² + s2² - coeff·s1·s2 ≈ (N·A/2)²`,
+    /// so dividing by N yields roughly `N·A²/4`. A 0.05-amplitude tone
+    /// over a 960-sample window at 48 kHz → ≈0.6 — comfortably above
+    /// the 0.003 "on" threshold and below "clipped".
     private func goertzelPower(_ samples: [Float]) -> Double {
         var s0: Double = 0
         var s1: Double = 0
@@ -197,6 +229,6 @@ final class AudioToneDecoder: NSObject, ObservableObject {
             s1 = s0
         }
         let power = s1 * s1 + s2 * s2 - goertzelCoeff * s1 * s2
-        return power / Double(samples.count * samples.count)
+        return power / Double(samples.count)
     }
 }
