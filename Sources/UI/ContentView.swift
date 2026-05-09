@@ -58,7 +58,7 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .toolbar(.hidden)
         .onReceive(levelTick) { _ in session.tickLevels() }
-        .sheet(isPresented: $showingSettings) { SettingsView() }
+        .sheet(isPresented: $showingSettings) { SettingsView(radio: session.radio) }
         .sheet(isPresented: $showingChat) { ChatView(session: session) }
         .sheet(isPresented: $showingPairing) {
             PairingView()

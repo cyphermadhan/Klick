@@ -62,6 +62,9 @@ final class PTTSession: ObservableObject {
     // Sub-systems
     let pipeline = AudioPipeline()
     let directory = PeerDirectory()
+    /// LoRa radio pair + connection state. Phase 3b.1 owns the model;
+    /// Phase 3b.2 will add the BLE client that mutates it.
+    let radio = RadioState()
     private let crypto = CryptoService()
     private let pairing = PairingService()
     private let sounds = WalkieSoundSynth()

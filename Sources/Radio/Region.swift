@@ -100,6 +100,41 @@ enum Region: String, CaseIterable, Sendable, Codable {
     }
 }
 
+/// Result of comparing the user's selected `Region` against the region
+/// preset reported by a paired Meshtastic radio's firmware.
+///
+/// A mismatch is a regulatory problem: US 915 MHz hardware used in India
+/// is transmitting on a protected band; India 865 MHz hardware used in
+/// the EU exceeds the 868 MHz sub-band boundary. In both cases, Klick's
+/// `RadioView` shows a non-dismissable warning and blocks TX until the
+/// user either reconfigures the radio or explicitly changes their region.
+enum RegionMismatch: Equatable {
+    /// User preference matches the hardware, good to transmit.
+    case ok
+    /// Hardware is unconfigured (`UNSET` / empty). User must flash a
+    /// region on the radio before TX.
+    case hardwareUnset
+    /// Mismatch — pass both values so the UI can show "you selected X
+    /// but the radio is Y".
+    case mismatch(user: Region, hardwarePreset: String)
+}
+
+extension Region {
+    /// Compare this (user-selected) region against the raw preset string
+    /// reported by Meshtastic firmware. `"UNSET"` or empty → unset;
+    /// otherwise matches when the presets are equal.
+    func compareToHardware(preset: String?) -> RegionMismatch {
+        let normalized = (preset ?? "").uppercased()
+        if normalized.isEmpty || normalized == "UNSET" {
+            return .hardwareUnset
+        }
+        if normalized == meshtasticPreset {
+            return .ok
+        }
+        return .mismatch(user: self, hardwarePreset: normalized)
+    }
+}
+
 /// Persistent store for the user's region preference.
 ///
 /// Mirrors `RangeModeStore` in shape: a static `current` getter that

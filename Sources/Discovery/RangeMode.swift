@@ -14,8 +14,12 @@ enum RangeMode: String, CaseIterable, Sendable {
     case wifi
     /// MultipeerConnectivity only. Bluetooth + peer-to-peer WiFi.
     case nearby
-    /// Advertise + browse on both paths simultaneously.
+    /// Advertise + browse on both WiFi and Nearby paths simultaneously.
     case both
+    /// External LoRa radio over BLE — text-only, kilometer-range. Requires
+    /// a paired Meshtastic-compatible accessory; the Settings picker
+    /// disables this row when no radio is paired.
+    case mesh
 
     /// Short terminal-style label for the Settings picker.
     var displayName: String {
@@ -23,6 +27,7 @@ enum RangeMode: String, CaseIterable, Sendable {
         case .wifi:   return "WIFI"
         case .nearby: return "NEARBY"
         case .both:   return "BOTH"
+        case .mesh:   return "MESH (LORA)"
         }
     }
 
@@ -32,11 +37,13 @@ enum RangeMode: String, CaseIterable, Sendable {
         case .wifi:   return "INFRA NETWORK · STANDARD RANGE"
         case .nearby: return "BLUETOOTH + P2P WIFI · NO ROUTER"
         case .both:   return "ADVERTISE ON BOTH · RECOMMENDED"
+        case .mesh:   return "LORA RADIO · TEXT ONLY · KM RANGE"
         }
     }
 
     var includesWifi: Bool { self == .wifi || self == .both }
     var includesNearby: Bool { self == .nearby || self == .both }
+    var includesMesh: Bool { self == .mesh }
 }
 
 /// UserDefaults-backed accessor for the user's range-mode preference.

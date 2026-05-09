@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Terminal-style settings sheet. Phase 1: device name + unpair + about.
+/// Terminal-style settings sheet.
 struct SettingsView: View {
+    @ObservedObject var radio: RadioState
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = DeviceName.current
     @State private var rangeMode: RangeMode = RangeModeStore.current
@@ -81,6 +82,37 @@ struct SettingsView: View {
                                               valueColor: DT.warn)
                                 }
                                 Text("REGION GOVERNS LORA BAND + POWER IN PHASE 3B. TODAY IT'S DISPLAY-ONLY.")
+                                    .walkieCaption()
+                                    .foregroundStyle(DT.textFaint)
+                            }
+                        }
+
+                        TerminalFrame("RADIO") {
+                            VStack(alignment: .leading, spacing: 10) {
+                                DotLeader(label: "STATUS",
+                                          value: radioStatusText,
+                                          valueColor: radioStatusColor)
+                                if let info = radio.displayInfo {
+                                    DotLeader(label: "DEVICE", value: info.deviceName.uppercased())
+                                }
+                                NavigationLink {
+                                    RadioView(state: radio)
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "antenna.radiowaves.left.and.right")
+                                        Text("OPEN RADIO…")
+                                            .walkieLabel(12)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 10, weight: .bold))
+                                    }
+                                    .foregroundStyle(DT.info)
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 10)
+                                    .overlay(Rectangle().strokeBorder(DT.info.opacity(0.6), lineWidth: 1))
+                                }
+                                .buttonStyle(.plain)
+                                Text("PHASE 3B.1 · READ-ONLY STATUS. BLE PAIRING SHIPS LATER.")
                                     .walkieCaption()
                                     .foregroundStyle(DT.textFaint)
                             }
@@ -173,6 +205,23 @@ struct SettingsView: View {
         RangeModeStore.set(rangeMode)
         RegionStore.current = region
         dismiss()
+    }
+
+    private var radioStatusText: String {
+        switch radio.phase {
+        case .connected:    return "CONNECTED"
+        case .pairing:      return "PAIRING…"
+        case .disconnected:
+            return radio.rememberedDeviceId == nil ? "NOT PAIRED" : "DISCONNECTED"
+        }
+    }
+
+    private var radioStatusColor: Color {
+        switch radio.phase {
+        case .connected:    return DT.ok
+        case .pairing:      return DT.warn
+        case .disconnected: return radio.rememberedDeviceId != nil ? DT.warn : DT.textFaint
+        }
     }
 
     private var appVersion: String {

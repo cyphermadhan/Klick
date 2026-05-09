@@ -61,6 +61,31 @@ final class RegionTests: XCTestCase {
         XCTAssertLessThan(Region.eu.maxPowerDbm, Region.in_.maxPowerDbm)
     }
 
+    // MARK: - Hardware mismatch
+
+    func testMatchingPresetReturnsOk() {
+        XCTAssertEqual(Region.us.compareToHardware(preset: "US"), .ok)
+        XCTAssertEqual(Region.eu.compareToHardware(preset: "EU_868"), .ok)
+        XCTAssertEqual(Region.in_.compareToHardware(preset: "IN_865"), .ok)
+    }
+
+    func testMismatchedPresetReportsBoth() {
+        let result = Region.in_.compareToHardware(preset: "US")
+        XCTAssertEqual(result, .mismatch(user: .in_, hardwarePreset: "US"))
+    }
+
+    func testLowerCasePresetNormalisedBeforeCompare() {
+        // Future-proofing — if Meshtastic sends "us" instead of "US" we
+        // still want to treat it as a match rather than a mismatch.
+        XCTAssertEqual(Region.us.compareToHardware(preset: "us"), .ok)
+    }
+
+    func testUnsetOrEmptyHardwareReturnsHardwareUnset() {
+        XCTAssertEqual(Region.us.compareToHardware(preset: "UNSET"), .hardwareUnset)
+        XCTAssertEqual(Region.us.compareToHardware(preset: ""), .hardwareUnset)
+        XCTAssertEqual(Region.us.compareToHardware(preset: nil), .hardwareUnset)
+    }
+
     func testMeshtasticPresetMatchesExpected() {
         // These exact strings are what Meshtastic firmware reports over
         // the admin channel — the pair-time region guard compares against

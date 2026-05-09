@@ -37,6 +37,7 @@
 		8AE9FBCFBD50B69C11789E5F /* UDPTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E1C4E325CA38FDED1B80DB /* UDPTransport.swift */; };
 		936F93767BE55FFE8A5ADF76 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA768B05DEB44570EC9E8EE /* DesignTokens.swift */; };
 		9C3E9ED89A1F556C547C57E8 /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF4F867D9A834BADA41E536 /* PairingView.swift */; };
+		9D18144F8855FEA7EAED52EC /* RadioState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD14EADF6CBBB9BED775386 /* RadioState.swift */; };
 		9E527965EA6C4B0D14856EEF /* MorseTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = B80551F1D625E205A491387C /* MorseTone.swift */; };
 		A52F761F829C4F4E5323B2CE /* PeerDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78616869EE1C43E641FB3577 /* PeerDirectory.swift */; };
 		A8837376FF8FB36D0C8501A9 /* UDPTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 150201850050EAD328838ADD /* UDPTransportTests.swift */; };
@@ -55,6 +56,7 @@
 		D53B77F4FBB483E75E92FBAC /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA248C85D299C3CFEAC3B36E /* AudioSessionManager.swift */; };
 		DA1C4553689A26D6A727FD5C /* CryptoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DA852F03C1CF67F44A54350 /* CryptoService.swift */; };
 		E5BCEA832EAFCA2EB4892109 /* PeerListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78CE62140BCFC1094E48E491 /* PeerListView.swift */; };
+		F065B4922BF36C39609E9BFF /* RadioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20DC16AC9B593F405AD8792D /* RadioView.swift */; };
 		F10B8D54AE74CE33CC2E19EA /* AudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = C86A611162EB4AB29CBD4182 /* AudioCapture.swift */; };
 		F403B3F8CAE4E35AC93B77B8 /* FlashlightBeacon.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F26B84FE9BC641F6F8485B /* FlashlightBeacon.swift */; };
 		F40DF069CE1D0C1C7F1BBE51 /* OpusCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413547B6B5B1FBCEED1FB57F /* OpusCodec.swift */; };
@@ -78,7 +80,9 @@
 		129247B9612BEC599B57853B /* CryptoServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoServiceTests.swift; sourceTree = "<group>"; };
 		14E92AB2E52589E1EF00AA6E /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		150201850050EAD328838ADD /* UDPTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDPTransportTests.swift; sourceTree = "<group>"; };
+		1AD14EADF6CBBB9BED775386 /* RadioState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioState.swift; sourceTree = "<group>"; };
 		1DA852F03C1CF67F44A54350 /* CryptoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoService.swift; sourceTree = "<group>"; };
+		20DC16AC9B593F405AD8792D /* RadioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioView.swift; sourceTree = "<group>"; };
 		2179D4EEFD3CABE3E8BF881F /* KeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyStore.swift; sourceTree = "<group>"; };
 		2D11DC5B1CF10FC75AA9BFCE /* PacketProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketProtocol.swift; sourceTree = "<group>"; };
 		336EE65987471D7E849B2163 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
@@ -127,7 +131,7 @@
 		E8B2F6BA5B6952661A90C53B /* FloatRingBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatRingBuffer.swift; sourceTree = "<group>"; };
 		F3A14F51FA22484C0D90198D /* walkie-release.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "walkie-release.mp3"; sourceTree = "<group>"; };
 		FEC80F6C6E752051169D6A33 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
-		"TEMP_10A4AB7E-C54D-4D09-BE77-0F87B3FB98EE" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		"TEMP_A0B778F3-1F65-454D-950A-03E34FD45A16" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -182,6 +186,7 @@
 			isa = PBXGroup;
 			children = (
 				97CD7BBE048D41E689D5FC5F /* DutyCycleLedger.swift */,
+				1AD14EADF6CBBB9BED775386 /* RadioState.swift */,
 				5C3D479596E26DBF33F47372 /* Region.swift */,
 			);
 			path = Radio;
@@ -308,16 +313,17 @@
 				11694DEEB649DDAE7C1B5753 /* MorseTreeView.swift */,
 				78CE62140BCFC1094E48E491 /* PeerListView.swift */,
 				E761761A41DA239C19E0561E /* PTTButton.swift */,
+				20DC16AC9B593F405AD8792D /* RadioView.swift */,
 				4389638E207A96A04375F3FE /* SettingsView.swift */,
 				9FCDD23E0910B1E1363123B1 /* TerminalPrimitives.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
 		};
-		"TEMP_011D88D3-90AB-4765-B7EA-F9A8D056B78E" /* Klick */ = {
+		"TEMP_D0A94FC8-55C7-4C70-95FB-D09C4F534993" /* Klick */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_10A4AB7E-C54D-4D09-BE77-0F87B3FB98EE" /* Signing.xcconfig */,
+				"TEMP_A0B778F3-1F65-454D-950A-03E34FD45A16" /* Signing.xcconfig */,
 			);
 			path = Klick;
 			sourceTree = "<group>";
@@ -455,6 +461,8 @@
 				3C4EF541B1E071EA7CF22F9A /* PeerInfo.swift in Sources */,
 				E5BCEA832EAFCA2EB4892109 /* PeerListView.swift in Sources */,
 				D0A315DB24FEE46F1848507C /* QRScannerView.swift in Sources */,
+				9D18144F8855FEA7EAED52EC /* RadioState.swift in Sources */,
+				F065B4922BF36C39609E9BFF /* RadioView.swift in Sources */,
 				B87A7400EF4BE7257809A4DD /* RangeMode.swift in Sources */,
 				078FFF98FBBB0E87332D60EE /* Region.swift in Sources */,
 				77C7F8457A8F8CB9EFF90B59 /* SettingsView.swift in Sources */,
@@ -563,7 +571,7 @@
 		};
 		6B01971E46A898944C3B7FEC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_10A4AB7E-C54D-4D09-BE77-0F87B3FB98EE" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_A0B778F3-1F65-454D-950A-03E34FD45A16" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -600,7 +608,7 @@
 		};
 		AE0F2DE2B6837F30287A01D1 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_10A4AB7E-C54D-4D09-BE77-0F87B3FB98EE" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_A0B778F3-1F65-454D-950A-03E34FD45A16" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
