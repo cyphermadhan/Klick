@@ -53,16 +53,24 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         2.0 * cos(2.0 * .pi * AudioToneDecoder.toneHz / 48_000)
 
     /// Main-actor task that drains captured samples into the Goertzel +
-    /// demodulator at a fixed cadence. Replaces an earlier `Timer` +
-    /// `MainActor.assumeIsolated` approach that was crashing with
-    /// dispatch_assert_queue_fail — the timer block was being scheduled
-    /// on AVAudioEngine's internal service queue (not main), and
-    /// `assumeIsolated` panics when that assumption fails. A `Task`
-    /// pinned to the main actor doesn't have that issue.
+    /// demodulator at a fixed cadence.
     private var tickTask: Task<Void, Never>?
     /// Accumulator for partial windows when the tap buffer length
     /// doesn't line up with our window size.
     private var windowBuffer: [Float] = []
+
+    /// Realtime-thread → main-actor sample handoff. Owned by the decoder
+    /// but captured directly by the install-tap closure so the closure
+    /// never references `self`. That distinction matters: previous
+    /// versions captured `self` weakly and called `self?.processBuffer`,
+    /// which crashed inside `_dispatch_assert_queue_fail` because Swift's
+    /// runtime inserts an executor check on the path through a
+    /// `@MainActor`-isolated `self`, and AVFAudio's
+    /// `RealtimeMessageServiceQueue` is not a dispatch queue the runtime
+    /// can safely interrogate. By moving state into a Sendable side
+    /// object, the audio thread never touches actor-isolated memory and
+    /// the executor check never fires.
+    private let sampleQueue = SampleQueue()
 
     override init() {
         super.init()
@@ -137,8 +145,18 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         // Defensive remove in case a prior start() left a tap behind
         // (can happen if engine.start threw after installTap succeeded).
         input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: hwFormat) { [weak self] buffer, _ in
-            self?.processBuffer(buffer)
+        // Capture only the Sendable sample queue — never `self`. See the
+        // doc comment on `sampleQueue` for why this matters.
+        let queue = sampleQueue
+        input.installTap(onBus: 0, bufferSize: 1024, format: hwFormat) { buffer, _ in
+            guard let channelData = buffer.floatChannelData?[0] else { return }
+            let frameLength = Int(buffer.frameLength)
+            var samples: [Float] = []
+            samples.reserveCapacity(frameLength)
+            for i in 0..<frameLength {
+                samples.append(channelData[i])
+            }
+            queue.append(samples)
         }
         do {
             try engine.start()
@@ -183,39 +201,11 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         }
     }
 
-    /// Pending samples produced on the render thread, drained on the
-    /// main-actor tick. Never mutate from two places at once — writes
-    /// from `processBuffer` and reads from `drainPendingSamples` both
-    /// go through `pendingLock`.
-    private let pendingLock = NSLock()
-    nonisolated(unsafe) private var pendingSamples: [Float] = []
-
-    nonisolated private func processBuffer(_ buffer: AVAudioPCMBuffer) {
-        guard let channelData = buffer.floatChannelData?[0] else { return }
-        let frameLength = Int(buffer.frameLength)
-        // Copy into a Swift array so the render thread doesn't hand off
-        // a raw pointer that AVAudioEngine might recycle.
-        var samples: [Float] = []
-        samples.reserveCapacity(frameLength)
-        for i in 0..<frameLength {
-            samples.append(channelData[i])
-        }
-        // Creating a Task from the real-time render thread can trip
-        // EXC_BREAKPOINT in the Swift concurrency runtime when the
-        // executor setup races with engine teardown. Stash into a
-        // lock-protected buffer instead; the main-thread tick drains it.
-        pendingLock.lock()
-        pendingSamples.append(contentsOf: samples)
-        pendingLock.unlock()
-    }
-
-    /// Called from the main-thread tick timer. Moves any samples the
-    /// render thread has buffered into the Goertzel path.
+    /// Called from the main-thread tick timer. Pulls everything the
+    /// audio thread has buffered into `sampleQueue` and routes it
+    /// through the Goertzel path.
     private func drainPendingSamples() {
-        pendingLock.lock()
-        let fresh = pendingSamples
-        pendingSamples.removeAll(keepingCapacity: true)
-        pendingLock.unlock()
+        let fresh = sampleQueue.drain()
         if !fresh.isEmpty {
             appendAndEvaluate(fresh)
         }
@@ -298,5 +288,29 @@ final class AudioToneDecoder: NSObject, ObservableObject {
         }
         let power = s1 * s1 + s2 * s2 - goertzelCoeff * s1 * s2
         return power / Double(samples.count)
+    }
+}
+
+/// Lock-protected sample buffer shared between the realtime audio thread
+/// (writer) and the main-actor tick (reader). Lives outside
+/// `AudioToneDecoder` so the `installTap` closure can capture it directly
+/// without going through `self` — see the comment on
+/// `AudioToneDecoder.sampleQueue` for the crash story.
+private final class SampleQueue: @unchecked Sendable {
+    private let lock = NSLock()
+    private var pending: [Float] = []
+
+    func append(_ samples: [Float]) {
+        lock.lock()
+        pending.append(contentsOf: samples)
+        lock.unlock()
+    }
+
+    func drain() -> [Float] {
+        lock.lock()
+        let fresh = pending
+        pending.removeAll(keepingCapacity: true)
+        lock.unlock()
+        return fresh
     }
 }

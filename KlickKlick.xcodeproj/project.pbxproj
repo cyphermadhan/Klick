@@ -161,7 +161,7 @@
 		F3A14F51FA22484C0D90198D /* walkie-release.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "walkie-release.mp3"; sourceTree = "<group>"; };
 		F4CD2AC8A254FE0BE69421F6 /* ProtobufWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtobufWire.swift; sourceTree = "<group>"; };
 		FEC80F6C6E752051169D6A33 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
-		"TEMP_0D3E44A8-49E8-47FA-A519-B6646B0A4A37" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		"TEMP_7EDAB6D9-307B-493B-BD90-9BE84EFBCB2D" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -365,10 +365,10 @@
 			path = UI;
 			sourceTree = "<group>";
 		};
-		"TEMP_B71DC02E-2EE4-4D26-9CB4-E7F0CE6EDFF5" /* Klick */ = {
+		"TEMP_48076B08-0A9A-4A67-B997-F253AD066EFD" /* Klick */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_0D3E44A8-49E8-47FA-A519-B6646B0A4A37" /* Signing.xcconfig */,
+				"TEMP_7EDAB6D9-307B-493B-BD90-9BE84EFBCB2D" /* Signing.xcconfig */,
 			);
 			path = Klick;
 			sourceTree = "<group>";
@@ -595,7 +595,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -631,7 +631,7 @@
 		};
 		6B01971E46A898944C3B7FEC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_0D3E44A8-49E8-47FA-A519-B6646B0A4A37" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_7EDAB6D9-307B-493B-BD90-9BE84EFBCB2D" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -668,7 +668,7 @@
 		};
 		AE0F2DE2B6837F30287A01D1 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_0D3E44A8-49E8-47FA-A519-B6646B0A4A37" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_7EDAB6D9-307B-493B-BD90-9BE84EFBCB2D" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -738,7 +738,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;

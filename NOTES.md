@@ -3,9 +3,9 @@
 Working notes. Updated ad-hoc. Source of truth for "what's done", "what's
 broken", and "what we're holding off on until hardware arrives."
 
-Last updated: 2026-05-10
-Current version: `0.4.0` / build `3`
-Test count: 104 unit tests, green on iPhone 16 simulator.
+Last updated: 2026-05-18
+Current version: `0.4.0` / build `5`
+Test count: 104 unit tests, green on iPhone 17 simulator.
 
 ---
 
@@ -112,20 +112,21 @@ Test count: 104 unit tests, green on iPhone 16 simulator.
 
 ## Known bugs / unfixed
 
-### ⚠ Audio listen crashes on device — **unresolved**
-**Last seen:** iPhone 16 Pro after commit `8510a29` (`_dispatch_assert_queue_fail` on Thread 5, queue `RealtimeMessageServiceQueue`).
+### ✅ Audio listen crash — **fixed in build 5**
+TestFlight 0.4.0/4 produced a symbolicated crash log (Thread 2, EXC_BREAKPOINT inside `_dispatch_assert_queue_fail`). Stack:
 
-**What we tried:**
-1. Dropped OSLog `.fixed(precision:)` formatter → no change.
-2. Simulator guard + session re-config skip when already in `.playAndRecord` → no change.
-3. Replaced `Task { @MainActor }` from render thread with lock-protected buffer + Timer drain → no change.
-4. Replaced `Timer.scheduledTimer` + `MainActor.assumeIsolated` with `Task { @MainActor in while !cancelled { sleep } }` loop → **still crashing**.
+```
+0  libdispatch  _dispatch_assert_queue_fail
+3  libswift_Concurrency  _swift_task_checkIsolatedSwift
+4  libswift_Concurrency  swift_task_isCurrentExecutorWithFlagsImpl
+5  KlickKlick  closure #1 in AudioToneDecoder.start()
+6  KlickKlick  thunk for @escaping (AVAudioPCMBuffer, AVAudioTime) -> ()
+7  AVFAudio  AVAudioNodeTap::TapMessage::RealtimeMessenger_Perform
+```
 
-**Likely remaining causes:**
-- AVAudioEngine's internal message queue is invoking something we touch; needs a fresh stack trace with symbolicated frames 1-18 on Thread 5 to pinpoint the exact caller of `_dispatch_assert_queue_fail`.
-- Another `dispatch_precondition` somewhere — possibly in our NSLock usage on the render thread, or in AudioSessionManager interacting with an already-active PTT session.
+**Root cause:** the install-tap closure captured `self` (a `@MainActor` class). Even though `processBuffer` was `nonisolated`, Swift's runtime still inserts an executor check on the path *through* `self?.` — and the check calls `dispatch_assert_queue` on what it expects to be a known dispatch queue, but AVFAudio's `RealtimeMessageServiceQueue` is a private caulk-based realtime context. Assertion fails → crash.
 
-**Parked by user.** Audio listen is effectively unusable until this is diagnosed.
+**Fix (build 5):** moved `pendingSamples` + lock into a separate `Sendable` reference type (`SampleQueue` at the bottom of `AudioToneDecoder.swift`). The install-tap closure now captures only that queue, never `self`. No actor-isolated state on the audio thread → no executor check fires.
 
 ---
 

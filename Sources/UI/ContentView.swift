@@ -17,6 +17,7 @@ import SwiftUI
 /// common verbs: "go live" (LINK) and "hold to talk" (PTT).
 struct ContentView: View {
     @StateObject private var session = PTTSession()
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showingPairing = false
     @State private var showingSettings = false
     @State private var showingChat = false
@@ -25,6 +26,16 @@ struct ContentView: View {
     /// Buffer for characters streamed from ListenView. Committed to the
     /// session's RX scroll as one entry when the listen sheet closes.
     @State private var decodedListenBuffer = ""
+    /// Tracks whether the user had Klick live before the app went to
+    /// background. iOS suspends UDP listeners and tears down MPC sessions
+    /// on background, so we have to stop cleanly on the way out and
+    /// restart on the way back. Without this, returning to the app shows
+    /// a stale "LIVE" status with no actual sockets behind it.
+    @State private var wasRunningBeforeBackground = false
+    /// Set true while we're awaiting `session.start()` after a background
+    /// return. Drives the RECONNECTING hint so users see the gap is
+    /// expected, not a stuck app.
+    @State private var isReconnecting = false
 
     /// 10 Hz decay pulse for VU bars — cheap, visible, and keeps UI feeling live.
     private let levelTick = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
@@ -49,6 +60,9 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .toolbar(.hidden)
         .onReceive(levelTick) { _ in session.tickLevels() }
+        // Legacy single-param onChange — the two-param form is iOS 17+
+        // and the project deploys back to iOS 16.
+        .onChange(of: scenePhase) { newPhase in handleScenePhase(newPhase) }
         .sheet(isPresented: $showingSettings) {
             SettingsView(radio: session.radio,
                          meshLink: session.meshLink as? CoreBluetoothMeshtasticLink)
@@ -286,6 +300,9 @@ struct ContentView: View {
     }
 
     private var hintContent: (msg: String, color: Color) {
+        if isReconnecting {
+            return ("RECONNECTING · TRANSPORTS RESUMING…", DT.warn)
+        }
         if !session.isRunning {
             return ("SYSTEM HALTED · TAP LINK TO GO LIVE", DT.textDim)
         }
@@ -297,6 +314,40 @@ struct ContentView: View {
         }
         let name = session.selectedPeer!.name.uppercased()
         return ("HOLD TRANSMIT · LINK SECURE TO \(name)", DT.ok)
+    }
+
+    /// Bridge between iOS scene-lifecycle and our session.
+    ///
+    /// iOS suspends `Network.framework` UDP listeners and tears down
+    /// `MultipeerConnectivity` sessions the moment the app backgrounds —
+    /// keeping the session "running" past that point is a lie. We stop
+    /// cleanly on the way out and, if the user had Klick live, restart
+    /// on the way back. The brief RECONNECTING hint covers the gap.
+    private func handleScenePhase(_ phase: ScenePhase) {
+        switch phase {
+        case .background:
+            if session.isRunning {
+                wasRunningBeforeBackground = true
+                session.stop()
+            }
+        case .active:
+            if wasRunningBeforeBackground && !session.isRunning {
+                wasRunningBeforeBackground = false
+                isReconnecting = true
+                Task {
+                    await session.start()
+                    isReconnecting = false
+                }
+            }
+        case .inactive:
+            // Transient (notifications, multitasking switcher); ignore —
+            // the system fires .background after if the app is fully
+            // suspended. Stopping on .inactive would churn the session
+            // every time the user pulls Control Center.
+            break
+        @unknown default:
+            break
+        }
     }
 
     // MARK: - PTT button (pinned bottom)
