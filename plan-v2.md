@@ -495,3 +495,72 @@ For reference, in case the question comes up again.
 Combined: a LoRa-voice Klick in Europe could legally transmit ~36 seconds of speech per hour, with 1–2 second latency, at HF-radio quality, one talker at a time, 2-device max (mesh saturates instantly). That's not a walkie-talkie — that's a party trick. FRS/GMRS/DMR exist for a reason.
 
 If you ever want real long-range voice, it's a different product built around a different radio accessory. Morse + text over LoRa is the correct scope for Klick v2.
+
+---
+
+## Phase 4 — "Reach a closed app" (future exploration, not scheduled)
+
+Parked from a 2026-05-11 design chat. Not committed; captured here so the tradeoffs aren't re-litigated from scratch next time it comes up.
+
+### The problem
+
+Today both users must have Klick foregrounded to talk. If the other person hasn't opened the app, there's no way to tell them a message or voice packet is waiting. The obvious instinct — "put it in the Dynamic Island" or "use a widget to keep the connection open" — runs into a wall of iOS platform rules. Worth documenting those rules once, here, so we stop re-discovering them.
+
+### What iOS actually allows
+
+- **UDP / Bonjour / MPC in background** — suspended on background transition, terminated shortly after. No entitlement changes this. Our WiFi and Nearby transports genuinely cannot deliver to a closed app.
+- **Live Activities / Dynamic Island** — display surfaces only. They can render state and update via push, but cannot hold an audio session, keep a socket alive, or transmit. A tap opens the app; that's the only interaction primitive. 8h max lifetime, 4h with push-token updates.
+- **Widgets** — run for milliseconds on a timeline. Interactive widgets (iOS 17+) can fire an App Intent but cannot sustain a connection or run audio. "Widget keeps the connection open" is not something iOS permits, and no entitlement unlocks it.
+- **`bluetooth-central` background mode** — the one exception. A paired BLE peripheral (e.g. our Meshtastic radio) notifying a subscribed characteristic **does wake a suspended — and in some cases terminated — app**, with state restoration. This is a real, supported path.
+- **Apple's PushToTalk framework** (`PTChannelManager`, iOS 16+) — purpose-built for walkie-talkies. Wakes the app from APNs, shows system walkie-talkie UI in Dynamic Island, supports transmit in background, integrates with AirPods hardware buttons. **Requires an APNs-capable backend.** Non-negotiable — it's the whole delivery mechanism.
+
+### Three paths, in order of architectural cost
+
+#### 4a. BLE background wake for LoRa/mesh text
+**Cheapest. Fits Klick's no-servers ethos unchanged.**
+
+- Add `UIBackgroundModes: bluetooth-central` + state restoration to `CoreBluetoothMeshtasticLink`.
+- When a FromRadio notify arrives while suspended, iOS wakes the app, the link hands the packet to `LoRaBridge`, the session decrypts, and we fire a local `UNNotification` + update a Live Activity ("INCOMING · FROM N7ZZ · tap to open").
+- Tap opens ChatView scrolled to the new message.
+- No server, no APNs, no extra dependencies. Only works for mesh peers (by construction — the radio is the wake source).
+
+**Risks:** BLE background connections are finicky. State restoration adds code paths we'd need to test carefully. Battery impact of staying connected to the radio 24/7 needs measurement.
+
+#### 4b. "Someone wants to talk" presence ping (hybrid)
+**For WiFi/MPC, the only way to reach a closed app is a push. That means a server.**
+
+Two shapes, depending on how much server we're willing to tolerate:
+
+- **Minimal APNs relay** — a tiny stateless service that accepts "poke peer X" from an authenticated client and forwards to that peer's device token via APNs. Device receives a silent push → Live Activity: "Alex wants to talk — tap to open." User taps, app opens, normal WiFi/MPC connection proceeds. Payload never touches the server — it's just a doorbell.
+- **LAN-only degenerate case** — if both phones are on the same LAN and *one* side is foregrounded, that side keeps broadcasting a presence beacon the other side's OS could theoretically wake on. In practice iOS won't wake a suspended app on arbitrary UDP; needs a BLE beacon or local-push-cert stretch that probably costs as much as just doing APNs. Not recommended.
+
+The doorbell server conflicts with Klick's identity ("no servers, no accounts"). Decide that tradeoff before committing.
+
+#### 4c. Full `PTChannelManager` adoption
+**Most capable, biggest architectural change.**
+
+- Adopt Apple's PushToTalk framework end-to-end. Users get real walkie-talkie behavior: system UI in Dynamic Island, AirPods press-to-talk, background receive, lock screen banner.
+- Requires an APNs backend capable of sending PTT-type pushes (a specific push payload format Apple validates).
+- Requires joining channels via `PTChannelManager` — the framework owns the audio session during TX/RX. Our Opus + libsodium pipeline still runs, but the *session* is framework-owned.
+- Net effect: Klick becomes a "proper" walkie-talkie app at the cost of operating a backend.
+
+### Dynamic Island / widget roles (when we do any of 4a/4b/4c)
+
+Settling the confusion once:
+- **Dynamic Island** — *surface* a Live Activity showing link state ("IDLE · peer last seen 2m ago" / "INCOMING from N7ZZ" / "ON AIR · holding TX"). Tap opens the app to the relevant screen. Do **not** expect to transmit from it.
+- **Home-screen widget** — show last peer + last message timestamp. Tap opens ChatView. No live connection inside the widget.
+- **Lock-screen widget / Control Center (iOS 18+)** — "open Klick to last peer" shortcut. Same model. Display + deep link, nothing more.
+
+These are polish layers that ride *on top of* whichever of 4a/4b/4c we pick. They are not a substitute for one.
+
+### Recommendation (when Phase 4 gets picked up)
+
+Start with **4a** — it's the only path that delivers the feature asked for (incoming message reaches a closed app) without changing what Klick is. The BLE wake + local notification + Live Activity combo genuinely works and needs zero backend.
+
+Revisit **4b** only if real-world usage shows the WiFi/MPC "must both be foregrounded" constraint is a blocker. At that point, be honest about whether a doorbell server is acceptable or whether Klick should stay purist.
+
+**4c** is the right choice only if we decide Klick should grow into a full walkie-talkie product with AirPods integration and background PTT — which is a different product thesis, not a polish pass.
+
+### Not doing now
+
+No code changes in Phase 4 until after the Phase 1–3 hardware validation is clean and the audio-listen crash is resolved. This section exists so the option is documented, not to queue up work.
