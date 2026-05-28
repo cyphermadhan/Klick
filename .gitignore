@@ -33,3 +33,4 @@ Signing.xcconfig
 # xcarchive output
 *.xcarchive
 *.ipa
+relay/node_modules/
