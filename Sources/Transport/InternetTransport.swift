@@ -121,17 +121,19 @@ final class InternetTransport: AudioTransport, @unchecked Sendable {
             // Send join message
             let join = "{\"type\":\"join\",\"name\":\"\(name)\"}"
             task.send(.string(join)) { [weak self] error in
+                guard let self else { return }
                 if let error {
-                    self?.log.error("Join send failed: \(error.localizedDescription, privacy: .public)")
-                    self?.scheduleReconnect()
+                    self.log.error("Join send failed: \(error.localizedDescription, privacy: .public)")
+                    self.scheduleReconnect()
                     return
                 }
-                self?.queue.async {
-                    self?.isConnected = true
-                    self?.reconnectDelay = 1.0
+                self.queue.async { [weak self] in
+                    guard let self else { return }
+                    self.isConnected = true
+                    self.reconnectDelay = 1.0
                 }
-                self?.log.info("Connected to relay room \(roomId, privacy: .public)")
-                self?.receiveLoop()
+                self.log.info("Connected to relay room \(roomId, privacy: .public)")
+                self.receiveLoop()
             }
 
             // Keepalive ping every 30s
