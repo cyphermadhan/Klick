@@ -124,51 +124,62 @@ final class PTTSession: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let self, let tokenData = notification.object as? Data else { return }
-            self.pushManager.didRegisterToken(tokenData)
-            // Register with relay for active channel
-            if let key = self.channelKey {
-                self.pushManager.registerWithRelay(channelKey: key, deviceName: DeviceName.current)
+            let tokenData = notification.object as? Data
+            Task { @MainActor in
+                guard let self, let tokenData else { return }
+                self.pushManager.didRegisterToken(tokenData)
+                if let key = self.channelKey {
+                    self.pushManager.registerWithRelay(channelKey: key, deviceName: DeviceName.current)
+                }
             }
         }
     }
 
     private func wireCameraControl() {
         cameraControlPTT.onBegin = { [weak self] in
-            self?.playPressSound()
-            self?.beginTransmit()
+            Task { @MainActor in
+                self?.playPressSound()
+                self?.beginTransmit()
+            }
         }
         cameraControlPTT.onEnd = { [weak self] in
-            self?.playReleaseSound()
-            self?.endTransmit()
+            Task { @MainActor in
+                self?.playReleaseSound()
+                self?.endTransmit()
+            }
         }
     }
 
     private func wireCallManager() {
         callManager.onAnswered = { [weak self] in
-            self?.log.info("Incoming call answered")
+            Task { @MainActor in
+                self?.log.info("Incoming call answered")
+            }
         }
         callManager.onEnded = { [weak self] in
-            self?.log.info("Call ended")
+            Task { @MainActor in
+                self?.log.info("Call ended")
+            }
         }
     }
 
     private func wirePTTIntentObserver() {
-        // Observe toggle-PTT requests from the Live Activity widget button / Action Button.
-        let defaults = UserDefaults(suiteName: "group.world.madhans.klick")
+        let suiteName = "group.world.madhans.klick"
         NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
-            object: defaults,
+            object: UserDefaults(suiteName: suiteName),
             queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
-            let requested = defaults?.bool(forKey: "ptt.requested") ?? false
-            if requested && !self.isTransmitting {
-                self.playPressSound()
-                self.beginTransmit()
-            } else if !requested && self.isTransmitting {
-                self.playReleaseSound()
-                self.endTransmit()
+            Task { @MainActor in
+                guard let self else { return }
+                let requested = UserDefaults(suiteName: suiteName)?.bool(forKey: "ptt.requested") ?? false
+                if requested && !self.isTransmitting {
+                    self.playPressSound()
+                    self.beginTransmit()
+                } else if !requested && self.isTransmitting {
+                    self.playReleaseSound()
+                    self.endTransmit()
+                }
             }
         }
     }
@@ -613,15 +624,6 @@ final class PTTSession: ObservableObject {
         // Forward to other peers if relay is enabled and TTL allows.
         if relay.shouldForward(envelope),
            let forwarded = relay.rewrap(envelope) {
-            // Build a relay packet and send to all connected peers.
-            let relayPacket = Packet(
-                type: .relay,
-                sequence: 0,
-                timestampMs: Packet.currentTimestampMs(),
-                nonce: Packet.zeroNonce(),
-                payload: forwarded
-            )
-            let wireData = relayPacket.encode()
             for (_, transport) in transports {
                 for peer in directory.peers where peer.transport == transport.kind {
                     transport.sendText(.relay, payload: forwarded, nonce: Packet.zeroNonce(), to: peer)
@@ -661,14 +663,6 @@ final class PTTSession: ObservableObject {
     /// Anyone who receives it and enters the passphrase joins the channel.
     func sendBroadcastInvite(channelName: String, passphrase: String) {
         let payload = BroadcastInviteCodec.encode(channelName: channelName, passphrase: passphrase, ttl: 3)
-        let packet = Packet(
-            type: .broadcastInvite,
-            sequence: 0,
-            timestampMs: Packet.currentTimestampMs(),
-            nonce: Packet.zeroNonce(),
-            payload: payload
-        )
-        let wireData = packet.encode()
         // Send to ALL peers on ALL transports (broadcast to everyone nearby).
         for (_, transport) in transports {
             for peer in directory.peers where peer.transport == transport.kind {

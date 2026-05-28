@@ -2,8 +2,8 @@ import Foundation
 import CryptoKit
 
 /// Configuration for the internet relay server.
-@MainActor
-enum RelayConfig {
+/// Not actor-isolated — these are simple UserDefaults reads safe from any context.
+enum RelayConfig: Sendable {
     /// Default relay URL. Replace with your deployed Cloudflare Worker URL.
     static let defaultURL = "wss://klick-relay.maddy-ax.workers.dev"
 

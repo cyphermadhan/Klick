@@ -16,7 +16,7 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: minimal
     MARKETING_VERSION: "0.5.0"
-    CURRENT_PROJECT_VERSION: "6"
+    CURRENT_PROJECT_VERSION: "7"
     IPHONEOS_DEPLOYMENT_TARGET: "16.0"
     TARGETED_DEVICE_FAMILY: "1"
     ENABLE_PREVIEWS: "YES"
@@ -124,6 +124,12 @@ targets:
       - target: KlickWidget
         embed: true
         link: false
+    entitlements:
+      path: Resources/KlickKlick.entitlements
+      properties:
+        aps-environment: development
+        com.apple.security.application-groups:
+          - group.world.madhans.klick
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: world.madhans.klick
