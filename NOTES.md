@@ -3,9 +3,9 @@
 Working notes. Updated ad-hoc. Source of truth for "what's done", "what's
 broken", and "what we're holding off on until hardware arrives."
 
-Last updated: 2026-05-18
-Current version: `0.4.0` / build `5`
-Test count: 104 unit tests, green on iPhone 17 simulator.
+Last updated: 2026-05-28
+Current version: `0.5.0` / build `6`
+Test count: 104 unit tests, green on iPhone 16 simulator.
 
 ---
 
@@ -108,6 +108,54 @@ Test count: 104 unit tests, green on iPhone 17 simulator.
 - **ListenView**: SWITCH button removed from decoder panes (BACK already returns to caller).
 - `CH 01` / `OPUS 48K` / `XS20·P1305` kept as aesthetic badges (terminal look).
 
+### Phase 4 — Channels + Multi-Peer PTT
+- **Channel model**: `Channel` struct (id, name, members, createdAt) persisted as JSON in Documents dir.
+- **ChannelStore**: `@MainActor ObservableObject` — CRUD, active channel tracking, auto-migration from legacy key → CH1.
+- **Per-channel encryption**: Each channel gets its own 32-byte key stored in Keychain under `account: "channel:<id>"`. Legacy pairwise key (`account: "default"`) kept for invite encryption.
+- **Multi-peer fan-out**: `selectedPeers: Set<PeerInfo>` replaces single `selectedPeer`. Audio and text encrypted once per frame, sent to each selected peer via their transport.
+- **Trial decryption**: Incoming packets try active channel key first, then iterate other channel keys (MAC check fails fast on wrong key).
+- **Channel switching**: Per-channel text history preserved in memory (`textHistoryByChannel` dictionary). Channel switch swaps visible history + loads new key.
+- **Channel UI**: Tappable menu in brand strip (replaces static "CH 01"), `ChannelCreateView` sheet, `ChannelMembersView` with online/offline status + invite/remove.
+- **Multi-select peer list**: `PeerListView` now uses `Set<PeerInfo>` binding with ■/□ toggle indicators, ALL/NONE buttons, DONE to confirm.
+- **Members card on main screen**: Shows channel members with LIVE/OFF status, tappable to open members sheet. Telemetry strip condensed to single row.
+- **Wire protocol additions**: `channelInvite (0x08)`, `channelInviteResponse (0x09)`.
+- **Invite flow (QR)**: v2 payload `klick:ch:<channelId>:<channelKey>:<channelName>` (base64url). `PairingService` parses both v1 (legacy) and v2 (channel).
+- **Invite flow (over-the-wire)**: `ChannelInviteCodec` encodes/decodes invite payloads. Encrypted with legacy pairwise key. `InviteReceivedView` for accept/decline.
+- **PeerDirectory helpers**: `isOnline(_:)`, `resolve(_:)` for member status; `.mesh` added to rebuild order.
+- Default channel names: CH1, CH2, etc. (sequential, user-renamable, ≤32 chars).
+
+### Phase 5 — Discoverability, Camera Control, CallKit, Phone Mesh
+
+#### 5a — Discoverability toggle
+- `DiscoverabilityStore` (UserDefaults, key `klick.discoverable`, default ON).
+- `AudioTransport` protocol gained `setAdvertising(_ enabled: Bool)`.
+- `UDPTransport`: sets `listener.service = nil` to stop Bonjour ads while keeping listener alive for receiving.
+- `MPCTransport`: calls `stopAdvertisingPeer()` / `startAdvertisingPeer()`.
+- `LoRaBridge`: no-op (radio firmware controls visibility).
+- `PTTSession.setDiscoverable(_:)` toggles all active transports.
+- Settings UI: DISCOVERY section with ON/OFF tap-to-toggle row.
+
+#### 5b — Camera Control PTT (iPhone 16)
+- `CameraControlPTT` class wraps `AVCaptureEventInteraction` (iOS 17.2+).
+- Captures full-press begin → `onBegin` (start transmit), end/cancel → `onEnd` (stop transmit).
+- Guarded with `#if !targetEnvironment(simulator)` for clean sim builds.
+- `CameraControlPTT.isAvailable` static check for feature detection.
+- Wired in `PTTSession.init()` to `beginTransmit()`/`endTransmit()` + click sounds.
+
+#### 5c — CallKit incoming alert
+- `CallManager` — full `CXProviderDelegate` implementation.
+- `reportIncomingCall(from:)` presents peer voice as a system call (rings, lock screen, bypasses DND).
+- `endCall()` dismisses when transmission stops.
+- `PTTSession` triggers ring when audio arrives while `UIApplication.shared.applicationState != .active`.
+- `project.yml`: added `UIBackgroundModes: [audio, voip]` for background audio session + VoIP push capability.
+
+#### 5d — Phone mesh relay (multi-hop)
+- `MeshRelay` — flood-based relay engine with TTL (max 3 hops) and dedup cache (500 entries, FIFO).
+- `MeshRelayStore` (UserDefaults, key `klick.meshRelay`, default ON).
+- Wire format: packet type `relay (0x0A)`, payload = `[TTL:1][nameLen:1][origin:N][innerPacket:rest]`.
+- On receive: unwrap envelope → process inner packet locally (trial decrypt) → if `shouldForward` (TTL>0, not seen, not self) → decrement TTL, re-wrap, forward to all other peers.
+- Settings UI: MESH RELAY toggle row in DISCOVERY section.
+
 ---
 
 ## Known bugs / unfixed
@@ -150,10 +198,19 @@ Anything BLE-adjacent can't be validated in the simulator. When a RAK WisBlock /
 - Region-mismatch guard activates when user region ≠ firmware region.
 - Duty-cycle ledger is accurate against Meshtastic's reported airtime.
 
+### Phase 4/5 — needs real hardware
+- **Multi-device channel test**: Create CH2, invite peer via QR and over-the-wire, verify both sides see the channel + can decrypt.
+- **Camera Control PTT**: Verify on physical iPhone 16 — press/release maps to TX start/stop.
+- **CallKit ring**: Background app on device A, transmit from device B → device A rings and shows lock screen UI.
+- **Phone mesh relay**: Three devices A↔B↔C (B relays), A sends text → C receives via B. Verify TTL decrement and dedup.
+- **Discoverability**: Toggle OFF on device A, verify device B no longer sees A in peer list, but A can still browse and send.
+
 ### Nice-to-have polish
 - Collapse same-name peers that appear on multiple transports into a single row with `BOTH` tag (currently shows two separate rows).
 - Wire Meshtastic's reported airtime back into `DutyCycleLedger` in place of the hardcoded 1500 ms estimate.
-- TestFlight upload of `0.4.0` / build 3.
+- Channel key rotation when a member is removed (currently removed members still hold the old key).
+- Persist chat history to disk (currently in-memory only, lost on app restart).
+- Live Activity on lock screen showing active channel + TX/RX state.
 
 ---
 
@@ -163,3 +220,19 @@ Anything BLE-adjacent can't be validated in the simulator. When a RAK WisBlock /
 - `Signing.xcconfig.example` — copy to `Signing.xcconfig` on a fresh clone, set `DEVELOPMENT_TEAM` for device builds.
 - `project.yml` — xcodegen source; run `xcodegen generate` after adding new source files.
 - Test target: `KlickKlickTests/`. Run via `xcodebuild … test` on an iPhone simulator.
+
+### Source layout (updated)
+
+```
+Sources/
+├── App/            — KlickKlickApp, PTTSession, CameraControlPTT, CallManager
+├── Audio/          — AVAudioEngine capture/playback, Opus codec, ring buffer
+├── Channel/        — Channel model, ChannelStore, ChannelInvite codec
+├── Crypto/         — libsodium secretbox wrapper + Keychain key storage
+├── Discovery/      — Bonjour, peer directory, range modes, discoverability
+├── Morse/          — Tone/flashlight encode+decode, Goertzel filter, demodulator
+├── Pairing/        — QR pairing (v1 legacy + v2 channel invite)
+├── Radio/          — Meshtastic BLE link, protobuf codec, duty cycle, region
+├── Transport/      — UDP, MPC, LoRa bridge, MeshRelay, packet protocol
+└── UI/             — SwiftUI views, design tokens, channel/member/invite sheets
+```

@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var showingChat = false
     @State private var showingListen = false
     @State private var showingPeers = false
+    @State private var showingChannelCreate = false
+    @State private var showingChannelMembers = false
     /// Buffer for characters streamed from ListenView. Committed to the
     /// session's RX scroll as one entry when the listen sheet closes.
     @State private var decodedListenBuffer = ""
@@ -49,8 +51,10 @@ struct ContentView: View {
                 navPills
                 statusTiles
                 diagnosticStrip
+                channelMembersCard
                 hintLine
                 Spacer(minLength: 0)
+                emergencyButton
                 pttButton
             }
             .padding(.horizontal, 16)
@@ -90,6 +94,12 @@ struct ContentView: View {
                     }
                 }
         }
+        .sheet(isPresented: $showingChannelCreate) {
+            ChannelCreateView(channelStore: session.channelStore)
+        }
+        .sheet(isPresented: $showingChannelMembers) {
+            ChannelMembersView(session: session)
+        }
     }
 
     // MARK: - Brand strip
@@ -102,16 +112,19 @@ struct ContentView: View {
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             Rectangle().fill(DT.border).frame(width: 1, height: 12)
-            // "CH 01" — walkie-talkie channel indicator, aesthetic only.
-            // Klick uses key-based pairing (one shared libsodium key per
-            // install), not frequency channels like traditional radios,
-            // so there's only ever one "channel" per pair. Kept for the
-            // terminal look.
-            Text("CH 01")
-                .walkieLabel(11)
-                .foregroundStyle(DT.textDim)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
+            Menu {
+                ForEach(session.channelStore.channels) { ch in
+                    Button(ch.displayName) { session.switchChannel(to: ch.id) }
+                }
+                Divider()
+                Button("+ NEW") { showingChannelCreate = true }
+            } label: {
+                Text(session.channelStore.activeChannel?.displayName ?? "CH1")
+                    .walkieLabel(11)
+                    .foregroundStyle(DT.info)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
             Rectangle().fill(DT.border).frame(width: 1, height: 12)
             // Codec + cipher badges — part of the terminal aesthetic.
             // "OPUS 48K" = Opus audio codec @ 48 kHz; "XS20·P1305" =
@@ -218,9 +231,9 @@ struct ContentView: View {
                     title: "PEER",
                     subtitle: peerSubtitle,
                     accent: DT.sys,
-                    active: session.selectedPeer != nil
+                    active: !session.selectedPeers.isEmpty
                 ) {
-                    Image(systemName: session.selectedPeer != nil
+                    Image(systemName: !session.selectedPeers.isEmpty
                           ? "iphone.gen3.radiowaves.left.and.right"
                           : "iphone.slash")
                         .font(.system(size: 22, weight: .bold))
@@ -239,8 +252,8 @@ struct ContentView: View {
     }
 
     private var peerSubtitle: String {
-        if let peer = session.selectedPeer {
-            return "TARGET · \(peer.name.uppercased())"
+        if let summary = session.selectedPeerSummary {
+            return "TARGET · \(summary.uppercased())"
         }
         if session.directory.peers.isEmpty {
             return "NO PEERS · TAP TO RESCAN"
@@ -266,25 +279,57 @@ struct ContentView: View {
         decodedListenBuffer.removeAll()
     }
 
-    // MARK: - Diagnostic strip
+    // MARK: - Diagnostic strip (compact single row)
 
     private var diagnosticStrip: some View {
         TerminalFrame("TELEMETRY") {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack {
-                    DiagCell(label: "PKT TX", value: String(format: "%05d", session.packetsSent))
-                    DiagCell(label: "PKT RX", value: String(format: "%05d", session.packetsReceived))
-                    DiagCell(label: "LOSS",   value: String(format: "%04.1f%%", session.lossPercent))
-                }
-                HStack {
-                    DiagCell(label: "SEQ",    value: String(format: "0x%04X", session.lastIncomingSequence ?? 0))
-                    DiagCell(label: "DROP",   value: String(format: "%05d", session.packetsDropped))
-                    DiagCell(label: "STATE",
-                             value: session.isTransmitting ? "TX" : (session.isRunning ? "LIVE" : "IDLE"),
-                             valueColor: session.isTransmitting ? DT.tx : (session.isRunning ? DT.ok : DT.textDim))
+            HStack {
+                DiagCell(label: "TX", value: String(format: "%04d", session.packetsSent))
+                DiagCell(label: "RX", value: String(format: "%04d", session.packetsReceived))
+                DiagCell(label: "LOSS", value: String(format: "%.0f%%", session.lossPercent))
+                DiagCell(label: "STATE",
+                         value: session.isTransmitting ? "TX" : (session.isRunning ? "LIVE" : "IDLE"),
+                         valueColor: session.isTransmitting ? DT.tx : (session.isRunning ? DT.ok : DT.textDim))
+            }
+        }
+    }
+
+    // MARK: - Channel members card
+
+    private var channelMembersCard: some View {
+        TerminalFrame("MEMBERS · \(session.channelStore.activeChannel?.displayName ?? "")") {
+            Group {
+                if let channel = session.channelStore.activeChannel, !channel.members.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(channel.members) { member in
+                            let online = session.directory.isOnline(member.name)
+                            HStack(spacing: 8) {
+                                Rectangle()
+                                    .fill(online ? DT.ok : DT.textFaint)
+                                    .frame(width: 6, height: 6)
+                                Text(member.name.uppercased())
+                                    .font(DT.mono(11, weight: .semibold))
+                                    .foregroundStyle(online ? DT.text : DT.textDim)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(online ? "LIVE" : "OFF")
+                                    .font(DT.mono(9, weight: .bold))
+                                    .tracking(1)
+                                    .foregroundStyle(online ? DT.ok : DT.textFaint)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                } else {
+                    Text("NO MEMBERS · TAP PEER TILE TO ADD")
+                        .walkieCaption()
+                        .foregroundStyle(DT.textFaint)
+                        .padding(.vertical, 4)
                 }
             }
         }
+        .contentShape(.rect)
+        .onTapGesture { showingChannelMembers = true }
     }
 
     // MARK: - Hint line
@@ -309,27 +354,26 @@ struct ContentView: View {
         if !session.isPaired {
             return ("PAIR REQUIRED · TAP PAIR TILE", DT.warn)
         }
-        if session.selectedPeer == nil {
+        if session.selectedPeers.isEmpty {
             return ("SELECT PEER · TAP PEER TILE", DT.info)
         }
-        let name = session.selectedPeer!.name.uppercased()
-        return ("HOLD TRANSMIT · LINK SECURE TO \(name)", DT.ok)
+        let summary = session.selectedPeerSummary?.uppercased() ?? "PEERS"
+        return ("HOLD TRANSMIT · LINK SECURE TO \(summary)", DT.ok)
     }
 
     /// Bridge between iOS scene-lifecycle and our session.
     ///
-    /// iOS suspends `Network.framework` UDP listeners and tears down
-    /// `MultipeerConnectivity` sessions the moment the app backgrounds —
-    /// keeping the session "running" past that point is a lie. We stop
-    /// cleanly on the way out and, if the user had Klick live, restart
-    /// on the way back. The brief RECONNECTING hint covers the gap.
+    /// With background audio mode enabled (UIBackgroundModes: audio, voip),
+    /// the session stays alive in background — we keep receiving and can
+    /// transmit via the Live Activity PTT button or Camera Control.
+    /// No stop/restart cycle needed. We only update the Live Activity
+    /// to reflect background state.
     private func handleScenePhase(_ phase: ScenePhase) {
         switch phase {
         case .background:
-            if session.isRunning {
-                wasRunningBeforeBackground = true
-                session.stop()
-            }
+            // Session stays alive — background audio mode keeps it running.
+            // Update live activity to indicate backgrounded state.
+            wasRunningBeforeBackground = session.isRunning
         case .active:
             if wasRunningBeforeBackground && !session.isRunning {
                 wasRunningBeforeBackground = false
@@ -350,11 +394,83 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Emergency button
+
+    @State private var emergencyHoldProgress: Double = 0
+    @State private var emergencyHoldTimer: Timer?
+
+    private var emergencyButton: some View {
+        Group {
+            if session.emergencyFrom != nil {
+                // Incoming emergency alert banner
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("EMERGENCY · \(session.emergencyFrom?.uppercased() ?? "")")
+                        .font(DT.mono(11, weight: .heavy))
+                        .tracking(1)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(DT.tx)
+            } else {
+                // Emergency trigger — hold 3 seconds
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 11, weight: .bold))
+                    Text(session.canSendEmergency ? "HOLD 3s · EMERGENCY" : "COOLDOWN \(Int(session.emergencyCooldownRemaining))s")
+                        .font(DT.mono(10, weight: .bold))
+                        .tracking(1)
+                }
+                .foregroundStyle(session.canSendEmergency ? DT.tx : DT.textFaint)
+                .frame(maxWidth: .infinity)
+                .frame(height: 28)
+                .background(
+                    GeometryReader { geo in
+                        Rectangle()
+                            .fill(DT.tx.opacity(0.2))
+                            .frame(width: geo.size.width * emergencyHoldProgress)
+                    }
+                )
+                .overlay(Rectangle().strokeBorder(DT.tx.opacity(0.4), lineWidth: 1))
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { _ in startEmergencyHold() }
+                        .onEnded { _ in cancelEmergencyHold() }
+                )
+                .disabled(!session.isRunning || !session.canSendEmergency)
+            }
+        }
+    }
+
+    private func startEmergencyHold() {
+        guard emergencyHoldTimer == nil else { return }
+        emergencyHoldProgress = 0
+        emergencyHoldTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+            Task { @MainActor in
+                emergencyHoldProgress += 0.05 / 3.0 // 3 seconds total
+                if emergencyHoldProgress >= 1.0 {
+                    cancelEmergencyHold()
+                    session.beginEmergency()
+                }
+            }
+        }
+    }
+
+    private func cancelEmergencyHold() {
+        emergencyHoldTimer?.invalidate()
+        emergencyHoldTimer = nil
+        if emergencyHoldProgress < 1.0 {
+            emergencyHoldProgress = 0
+        }
+    }
+
     // MARK: - PTT button (pinned bottom)
 
     private var pttButton: some View {
         PTTButton(
-            isTransmitting: session.isTransmitting,
+            isTransmitting: session.isTransmitting && session.emergencyFrom == nil,
             isEnabled: canTransmit,
             outboundLevel: session.outboundLevel,
             inboundLevel: session.inboundLevel,
@@ -363,14 +479,18 @@ struct ContentView: View {
                 session.beginTransmit()
             },
             onEnd: {
-                session.playReleaseSound()
-                session.endTransmit()
+                if session.emergencyFrom == DeviceName.current {
+                    session.endEmergency()
+                } else {
+                    session.playReleaseSound()
+                    session.endTransmit()
+                }
             }
         )
     }
 
     private var canTransmit: Bool {
-        session.isRunning && session.isPaired && session.selectedPeer != nil
+        session.isRunning && session.isPaired && !session.selectedPeers.isEmpty
     }
 }
 
@@ -392,10 +512,7 @@ private struct DiagCell: View {
     }
 }
 
-/// Modal peer-list sheet. The peer list used to fill the main screen;
-/// now it lives here, reachable via the PEER tile, and closes itself
-/// once a peer is picked so the user lands back on the PTT screen
-/// ready to transmit.
+/// Modal peer-list sheet with multi-select. Reachable via the PEER tile.
 struct PeerListSheet: View {
     @ObservedObject var session: PTTSession
     @Environment(\.dismiss) private var dismiss
@@ -409,25 +526,37 @@ struct PeerListSheet: View {
                         .walkieLabel(13, weight: .heavy, tracking: 3)
                         .foregroundStyle(DT.text)
                     Spacer()
-                    Button("CLOSE") { dismiss() }
+                    Button("DONE") { dismiss() }
                         .font(DT.mono(11, weight: .bold))
                         .tracking(DT.labelTracking)
-                        .foregroundStyle(DT.textDim)
+                        .foregroundStyle(DT.info)
                         .padding(.horizontal, 10).padding(.vertical, 6)
-                        .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
+                        .overlay(Rectangle().strokeBorder(DT.info.opacity(0.6), lineWidth: 1))
                         .buttonStyle(.plain)
+                }
+                HStack(spacing: 10) {
+                    Button("ALL") {
+                        session.selectedPeers = Set(session.directory.peers)
+                    }
+                    .font(DT.mono(10, weight: .bold))
+                    .tracking(DT.labelTracking)
+                    .foregroundStyle(DT.textDim)
+                    .buttonStyle(.plain)
+                    Button("NONE") {
+                        session.selectedPeers.removeAll()
+                    }
+                    .font(DT.mono(10, weight: .bold))
+                    .tracking(DT.labelTracking)
+                    .foregroundStyle(DT.textDim)
+                    .buttonStyle(.plain)
+                    Spacer()
+                    Text("\(session.selectedPeers.count) SELECTED")
+                        .walkieLabel(10)
+                        .foregroundStyle(DT.textDim)
                 }
                 TerminalFrame("DISCOVERED") {
                     PeerListView(directory: session.directory,
-                                 selectedPeer: Binding(
-                                    get: { session.selectedPeer },
-                                    set: { new in
-                                        session.selectedPeer = new
-                                        // Close on pick so the user drops
-                                        // back to the PTT screen.
-                                        if new != nil { dismiss() }
-                                    }
-                                 ))
+                                 selectedPeers: $session.selectedPeers)
                 }
                 .frame(maxHeight: .infinity)
             }

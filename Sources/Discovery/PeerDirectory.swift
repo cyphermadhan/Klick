@@ -46,12 +46,21 @@ final class PeerDirectory: ObservableObject {
         peers = []
     }
 
+    /// Check if a device with this name is currently discoverable.
+    func isOnline(_ memberName: String) -> Bool {
+        peers.contains { $0.name == memberName }
+    }
+
+    /// Resolve a member name to the best available PeerInfo (WiFi > Nearby > Mesh).
+    func resolve(_ memberName: String) -> PeerInfo? {
+        peers.first { $0.name == memberName && $0.transport == .wifi }
+        ?? peers.first { $0.name == memberName && $0.transport == .nearby }
+        ?? peers.first { $0.name == memberName && $0.transport == .mesh }
+    }
+
     private func rebuild() {
         var merged: [PeerInfo] = []
-        // Explicit bucket order — WIFI first (historically preferred for
-        // voice: lower latency, less RF contention), then NEARBY. When
-        // Phase 3 adds .mesh, append it here.
-        for kind in [PeerTransport.wifi, .nearby] {
+        for kind in [PeerTransport.wifi, .nearby, .mesh, .internet] {
             if let bucket = peersByTransport[kind] {
                 merged.append(contentsOf: bucket)
             }

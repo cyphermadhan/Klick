@@ -38,6 +38,11 @@
 	<string>Used to discover and communicate with nearby devices.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Used for push-to-talk voice communication.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>voip</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

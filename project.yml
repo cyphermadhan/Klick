@@ -15,8 +15,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: minimal
-    MARKETING_VERSION: "0.4.0"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "0.5.0"
+    CURRENT_PROJECT_VERSION: "6"
     IPHONEOS_DEPLOYMENT_TARGET: "16.0"
     TARGETED_DEVICE_FAMILY: "1"
     ENABLE_PREVIEWS: "YES"
@@ -109,6 +109,9 @@ targets:
         # under US EAR 740.17(b). Declaring NO means we don't need a year
         # review submission with each TestFlight build.
         ITSAppUsesNonExemptEncryption: false
+        UIBackgroundModes:
+          - audio
+          - voip
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIRequiresFullScreen: true
@@ -118,6 +121,9 @@ targets:
     dependencies:
       - package: Sodium
         product: Sodium
+      - target: KlickWidget
+        embed: true
+        link: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: world.madhans.klick
@@ -129,6 +135,21 @@ targets:
         # into TestFlight as "iPad supported" unless explicitly overridden
         # here on the target as well.
         TARGETED_DEVICE_FAMILY: "1"
+
+  KlickWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: KlickWidget
+      - path: Sources/LiveActivity
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: world.madhans.klick.widget
+        GENERATE_INFOPLIST_FILE: "NO"
+        SKIP_INSTALL: "YES"
+        TARGETED_DEVICE_FAMILY: "1"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        SWIFT_EMIT_LOC_STRINGS: "YES"
 
   KlickKlickTests:
     type: bundle.unit-test

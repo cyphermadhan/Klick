@@ -20,6 +20,10 @@ final class KeyStore: Sendable {
         self.account = account
     }
 
+    convenience init(forChannel channelId: String) {
+        self.init(account: "channel:\(channelId)")
+    }
+
     func save(_ key: Data) throws {
         // Delete any existing entry first; SecItemAdd fails with duplicate if present.
         let delQuery: [String: Any] = [

@@ -119,6 +119,21 @@ final class UDPTransport: AudioTransport, @unchecked Sendable {
         onPeersChanged?([])
     }
 
+    func setAdvertising(_ enabled: Bool) {
+        queue.sync {
+            if enabled {
+                // Re-set the service name to resume Bonjour advertisement.
+                if let name = selfName {
+                    listener?.service = NWListener.Service(name: name, type: "_walkie._udp.")
+                }
+            } else {
+                // Remove the service to stop advertising. Listener stays up
+                // so we can still receive from peers who already know us.
+                listener?.service = nil
+            }
+        }
+    }
+
     func sendAudio(opusPayload: Data, nonce: Data, to peer: PeerInfo) {
         guard peer.transport == .wifi else { return }
         queue.async { [weak self] in

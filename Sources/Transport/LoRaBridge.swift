@@ -96,6 +96,11 @@ final class LoRaBridge: AudioTransport, @unchecked Sendable {
         onPeersChanged?([])
     }
 
+    func setAdvertising(_ enabled: Bool) {
+        // Mesh advertising is controlled by the radio firmware, not the app.
+        // No-op here — the radio is always discoverable while connected.
+    }
+
     func sendAudio(opusPayload: Data, nonce: Data, to peer: PeerInfo) {
         // Voice over LoRa is out of scope (see plan-v2 appendix). The UI
         // also blocks the PTT button for mesh peers, so this path should

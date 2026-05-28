@@ -32,6 +32,23 @@ enum PacketType: UInt8, Sendable {
     /// latency, lossy) but harmless over WiFi / MPC where delivery is
     /// already observable by other means.
     case ack       = 0x07
+    /// Channel invite — payload contains channel ID, name, and key encrypted
+    /// with the legacy pairwise key.
+    case channelInvite         = 0x08
+    /// Response to a channel invite — accept or decline.
+    case channelInviteResponse = 0x09
+    /// Relay envelope — wraps another packet for multi-hop forwarding.
+    /// Payload: [TTL: 1][originNameLen: 1][originName: N][innerPacket: rest]
+    case relay = 0x0A
+    /// Emergency priority interrupt — force-plays on all channel members
+    /// at maximum volume. Payload: [senderNameLen: 1][senderName: N][encrypted audio]
+    /// Rate-limited to 1 per 60 seconds per sender.
+    case emergency = 0x0B
+    /// Broadcast invite — spreads to all nearby devices (even unpaired).
+    /// Payload is UNENCRYPTED: [TTL:1][channelNameLen:1][channelName:N][passphraseLen:1][passphrase:N]
+    /// (or passphrase can be empty for open/no-password channels).
+    /// Forwarded by any device with mesh relay enabled.
+    case broadcastInvite = 0x0C
 }
 
 struct Packet: Sendable, Equatable {

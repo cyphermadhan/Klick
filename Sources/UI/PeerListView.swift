@@ -1,14 +1,10 @@
 import SwiftUI
 
-/// Monospace list of discovered peers. Each row renders as a dot-leader
-/// readout: `> NAME........ [WIFI] RDY  ▪▪▪▪▫`. Tapping selects a peer.
-///
-/// The transport pill (`WIFI` / `NEAR`) appears on every row so users know
-/// which link they'd be talking over — meaningful once RangeMode can
-/// surface peers from both paths simultaneously.
+/// Monospace list of discovered peers with multi-select. Each row renders as
+/// `[■] NAME........ [WIFI] RDY  ▪▪▪▪▫`. Tapping toggles selection.
 struct PeerListView: View {
     @ObservedObject var directory: PeerDirectory
-    @Binding var selectedPeer: PeerInfo?
+    @Binding var selectedPeers: Set<PeerInfo>
 
     var body: some View {
         Group {
@@ -18,8 +14,8 @@ struct PeerListView: View {
                 VStack(spacing: 0) {
                     ForEach(directory.peers) { peer in
                         PeerRow(peer: peer,
-                                isSelected: peer == selectedPeer,
-                                onTap: { selectedPeer = peer })
+                                isSelected: selectedPeers.contains(peer),
+                                onTap: { toggleSelection(peer) })
                         if peer.id != directory.peers.last?.id {
                             Rectangle()
                                 .fill(DT.border)
@@ -29,6 +25,14 @@ struct PeerListView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func toggleSelection(_ peer: PeerInfo) {
+        if selectedPeers.contains(peer) {
+            selectedPeers.remove(peer)
+        } else {
+            selectedPeers.insert(peer)
         }
     }
 
@@ -58,7 +62,7 @@ private struct PeerRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(isSelected ? ">" : " ")
+            Text(isSelected ? "■" : "□")
                 .font(DT.mono(13, weight: .bold))
                 .foregroundStyle(isSelected ? DT.tx : DT.textFaint)
 
@@ -93,8 +97,6 @@ private struct PeerRow: View {
         .onTapGesture(perform: onTap)
     }
 
-    /// Compact transport tag (WIFI / NEAR). Color-coded for scannability —
-    /// nearby has a warmer tint since it's the "walked up to them" mode.
     private var transportPill: some View {
         let tint: Color = peer.transport == .wifi ? DT.info : DT.warn
         return Text(peer.transport.tag)
@@ -108,9 +110,6 @@ private struct PeerRow: View {
             )
     }
 
-    /// 5-cell signal meter. We don't measure real signal yet — peers we
-    /// can see are considered fully "in range" so we show 5/5 by default.
-    /// Will be driven by real ping RTT in a future milestone.
     private var signalMeter: some View {
         HStack(spacing: 2) {
             ForEach(0..<5, id: \.self) { i in

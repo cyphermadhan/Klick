@@ -110,6 +110,17 @@ final class MPCTransport: NSObject, AudioTransport, @unchecked Sendable {
         onPeersChanged?([])
     }
 
+    func setAdvertising(_ enabled: Bool) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            if enabled {
+                self.advertiser?.startAdvertisingPeer()
+            } else {
+                self.advertiser?.stopAdvertisingPeer()
+            }
+        }
+    }
+
     func sendAudio(opusPayload: Data, nonce: Data, to peer: PeerInfo) {
         guard peer.transport == .nearby else { return }
         queue.async { [weak self] in

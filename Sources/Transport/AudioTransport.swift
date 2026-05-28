@@ -15,13 +15,17 @@ enum PeerTransport: String, Sendable, Hashable {
     /// External Meshtastic-compatible LoRa radio paired over BLE.
     /// Text-only (voice doesn't fit in the bandwidth); kilometer range.
     case mesh
+    /// Internet relay via Cloudflare Durable Objects WebSocket.
+    /// Worldwide range; requires internet connectivity.
+    case internet
 
     /// Short label shown on peer list rows.
     var tag: String {
         switch self {
-        case .wifi:   return "WIFI"
-        case .nearby: return "NEAR"
-        case .mesh:   return "MESH"
+        case .wifi:     return "WIFI"
+        case .nearby:   return "NEAR"
+        case .mesh:     return "MESH"
+        case .internet: return "NET"
         }
     }
 }
@@ -50,6 +54,10 @@ protocol AudioTransport: AnyObject {
 
     /// Tear down. Safe to call repeatedly; no-op if not started.
     func stop()
+
+    /// Toggle advertising visibility. When false, this device is hidden
+    /// from others' peer scans but can still browse and send.
+    func setAdvertising(_ enabled: Bool)
 
     /// Send one encrypted audio frame to a specific peer. The transport is
     /// responsible for locating the right endpoint from `peer.id`. If the

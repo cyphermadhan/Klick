@@ -1,0 +1,10 @@
+name = "klick-relay"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+[durable_objects]
+bindings = [{ name = "CHANNEL", class_name = "ChannelRoom" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ChannelRoom"]

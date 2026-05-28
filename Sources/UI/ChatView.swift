@@ -365,7 +365,7 @@ struct ChatView: View {
     // MARK: - Send
 
     private var canSend: Bool {
-        session.isRunning && session.isPaired && session.selectedPeer != nil &&
+        session.isRunning && session.isPaired && !session.selectedPeers.isEmpty &&
             !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 

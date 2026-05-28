@@ -20,6 +20,8 @@ final class PairingService: Sendable {
 
     static let scheme = "walkie"
     static let version = "v1"
+    static let channelScheme = "klick"
+    static let channelVersion = "ch"
 
     private let crypto = CryptoService()
     private let store: KeyStore
@@ -118,6 +120,57 @@ final class PairingService: Sendable {
 
     func unpair() throws {
         try store.clear()
+    }
+
+    // MARK: - Channel QR (v2)
+
+    /// Generate a QR payload for inviting someone to a channel.
+    /// Format: `klick:ch:<base64url(channelId)>:<base64url(channelKey)>:<base64url(channelName)>`
+    func channelQRPayload(channelId: String, channelKey: Data, channelName: String) -> String {
+        let parts = [
+            Self.channelScheme,
+            Self.channelVersion,
+            Data(channelId.utf8).base64URLEncoded(),
+            channelKey.base64URLEncoded(),
+            Data(channelName.utf8).base64URLEncoded()
+        ]
+        return parts.joined(separator: ":")
+    }
+
+    /// Parse a channel QR payload. Returns nil if it's not a channel invite QR.
+    func parseChannelQR(_ payload: String) -> (channelId: String, channelKey: Data, channelName: String)? {
+        let parts = payload.split(separator: ":", maxSplits: 4, omittingEmptySubsequences: false)
+        guard parts.count == 5,
+              parts[0] == Self.channelScheme,
+              parts[1] == Self.channelVersion else { return nil }
+        guard let idData = Data(base64URLEncoded: String(parts[2])),
+              let channelId = String(data: idData, encoding: .utf8) else { return nil }
+        guard let channelKey = Data(base64URLEncoded: String(parts[3])),
+              channelKey.count == CryptoService.keyBytes else { return nil }
+        guard let nameData = Data(base64URLEncoded: String(parts[4])),
+              let channelName = String(data: nameData, encoding: .utf8) else { return nil }
+        return (channelId, channelKey, channelName)
+    }
+
+    /// Check if a scanned payload is a v1 legacy pairing or a channel invite.
+    @MainActor
+    func acceptScannedPayloadUnified(_ payload: String, channelStore: ChannelStore) throws -> AcceptResult {
+        if let channelInfo = parseChannelQR(payload) {
+            let member = ChannelMember(name: DeviceName.current, addedAt: .now)
+            let channel = channelStore.create(
+                name: channelInfo.channelName,
+                key: channelInfo.channelKey,
+                members: [member]
+            )
+            return .channelJoined(channel)
+        }
+        let key = try acceptScannedPayload(payload)
+        return .legacyPaired(key)
+    }
+
+    enum AcceptResult {
+        case legacyPaired(Data)
+        case channelJoined(Channel)
     }
 }
 
