@@ -48,14 +48,6 @@ final class PTTSession: ObservableObject {
     /// Rough inbound level in [0,1] from the last received audio packet's payload size.
     @Published private(set) var inboundLevel: Double = 0
 
-    // MARK: Emergency priority interrupt
-    /// Non-nil when an emergency alert is actively playing. Shows sender name in UI.
-    @Published private(set) var emergencyFrom: String?
-    /// Timestamp of last emergency sent (for cooldown enforcement).
-    private var lastEmergencySent: Date?
-    /// Cooldown duration between emergency sends.
-    private let emergencyCooldown: TimeInterval = 60
-
     // MARK: Text (Morse + Chat share this plumbing)
     /// Fires once per inbound morse message so `ChatView` can replay it
     /// as beeps / torch flashes. Transient — cleared immediately after
@@ -362,103 +354,6 @@ final class PTTSession: ObservableObject {
         )
     }
 
-    // MARK: - Emergency Priority Interrupt
-
-    /// Whether the cooldown has elapsed and an emergency can be sent.
-    var canSendEmergency: Bool {
-        guard let last = lastEmergencySent else { return true }
-        return Date().timeIntervalSince(last) >= emergencyCooldown
-    }
-
-    /// Seconds remaining until emergency can be sent again.
-    var emergencyCooldownRemaining: TimeInterval {
-        guard let last = lastEmergencySent else { return 0 }
-        return max(0, emergencyCooldown - Date().timeIntervalSince(last))
-    }
-
-    /// Begin emergency transmission. Sends all subsequent audio frames as
-    /// emergency packets (force-play on receivers) until `endEmergency()`.
-    /// Enforces a 60-second cooldown between triggers.
-    func beginEmergency() {
-        guard isRunning, channelKey != nil, canSendEmergency else {
-            if !canSendEmergency {
-                errorMessage = "EMERGENCY COOLDOWN: \(Int(emergencyCooldownRemaining))s"
-            }
-            return
-        }
-        lastEmergencySent = Date()
-        isTransmitting = true
-        emergencyFrom = DeviceName.current
-        updateLiveActivity()
-    }
-
-    func endEmergency() {
-        isTransmitting = false
-        outboundLevel = 0
-        // Keep emergencyFrom visible briefly so receivers see who triggered it.
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(3))
-            self?.emergencyFrom = nil
-        }
-        updateLiveActivity()
-    }
-
-    /// Send an emergency audio frame to ALL members of the channel
-    /// (not just selected peers). Ignores peer selection — broadcasts to everyone.
-    private func handleOutgoingEmergencyAudio(_ opusFrame: Data) {
-        guard isTransmitting, emergencyFrom != nil,
-              let key = channelKey else { return }
-        do {
-            let senderBytes = Data(DeviceName.current.utf8)
-            var payload = Data(capacity: 1 + senderBytes.count + opusFrame.count)
-            payload.append(UInt8(senderBytes.count))
-            payload.append(senderBytes)
-            payload.append(opusFrame)
-
-            let (ciphertext, nonce) = try crypto.seal(payload, key: key)
-            // Broadcast to ALL online peers in the channel, not just selected ones.
-            for peer in directory.peers {
-                guard let transport = transports[peer.transport] else { continue }
-                transport.sendText(.emergency, payload: ciphertext, nonce: nonce, to: peer)
-            }
-            packetsSent &+= 1
-            outboundLevel = min(1.0, max(0, Double(opusFrame.count - 20) / 80.0))
-        } catch {
-            log.error("Emergency encrypt failed: \(String(describing: error))")
-        }
-    }
-
-    private func handleIncomingEmergency(_ packet: Packet) {
-        guard let key = resolveKey(for: packet) else {
-            packetsDropped &+= 1
-            return
-        }
-        guard let plaintext = crypto.open(ciphertext: packet.payload, key: key, nonce: packet.nonce) else {
-            packetsDropped &+= 1
-            return
-        }
-        guard plaintext.count > 1 else { return }
-        let nameLen = Int(plaintext[plaintext.startIndex])
-        guard plaintext.count > 1 + nameLen else { return }
-        let nameData = plaintext[(plaintext.startIndex + 1)..<(plaintext.startIndex + 1 + nameLen)]
-        let senderName = String(data: nameData, encoding: .utf8) ?? "UNKNOWN"
-        let opusFrame = plaintext[(plaintext.startIndex + 1 + nameLen)...]
-
-        // Force-play regardless of selected peers or current state.
-        emergencyFrom = senderName
-        packetsReceived &+= 1
-        inboundLevel = 1.0
-        pipeline.receive(opusFrame: Data(opusFrame))
-
-        // Auto-clear the emergency indicator after audio stops.
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(5))
-            if self?.emergencyFrom == senderName {
-                self?.emergencyFrom = nil
-            }
-        }
-    }
-
     // MARK: - Text (Morse + Chat)
 
     /// Send a Morse-keyed text message. Encrypts with the shared key and
@@ -619,11 +514,6 @@ final class PTTSession: ObservableObject {
     }
 
     private func handleOutgoingAudio(_ opusFrame: Data) {
-        // Emergency mode: broadcast to ALL peers, not just selected ones.
-        if emergencyFrom == DeviceName.current {
-            handleOutgoingEmergencyAudio(opusFrame)
-            return
-        }
         guard isTransmitting, let key = channelKey, !selectedPeers.isEmpty else { return }
         do {
             let (ciphertext, nonce) = try crypto.seal(opusFrame, key: key)
@@ -647,7 +537,7 @@ final class PTTSession: ObservableObject {
         case .relay:
             handleRelay(packet)
         case .emergency:
-            handleIncomingEmergency(packet)
+            break // Reserved for future use
         case .broadcastInvite:
             handleBroadcastInvite(packet)
         case .audio:

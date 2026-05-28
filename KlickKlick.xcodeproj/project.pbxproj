@@ -139,7 +139,7 @@
 		03AEC384CDC96C142A1CE1E1 /* AudioPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPipeline.swift; sourceTree = "<group>"; };
 		07B2730DDECC2B464036C055 /* KlickLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlickLiveActivity.swift; sourceTree = "<group>"; };
 		08321364C5092E900B6C6CA7 /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
-		087C623B5466F6899F9330A4 /* KlickWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = KlickWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		087C623B5466F6899F9330A4 /* KlickWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KlickWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C1B7C0C74CC20A1F2E72796 /* TogglePTTIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TogglePTTIntent.swift; sourceTree = "<group>"; };
 		0C6D06E100E5A3E197886343 /* LoRaBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoRaBridge.swift; sourceTree = "<group>"; };
 		12580B5BC33A36550850EB91 /* PassphraseJoin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassphraseJoin.swift; sourceTree = "<group>"; };
@@ -165,7 +165,7 @@
 		413547B6B5B1FBCEED1FB57F /* OpusCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusCodec.swift; sourceTree = "<group>"; };
 		414A0DB7BBD85364EED219EF /* FlashlightDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashlightDecoder.swift; sourceTree = "<group>"; };
 		4389638E207A96A04375F3FE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		453574259363FFD92C9865E0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		453574259363FFD92C9865E0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		462466D0E6950AD760FB6AA8 /* PeerDirectoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerDirectoryTests.swift; sourceTree = "<group>"; };
 		48BB547AFB5F9FB698729BED /* KlickWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KlickWidget.entitlements; sourceTree = "<group>"; };
 		50E1C4E325CA38FDED1B80DB /* UDPTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDPTransport.swift; sourceTree = "<group>"; };
@@ -184,7 +184,7 @@
 		7AF8898518EB18037923E933 /* walkie-press.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "walkie-press.mp3"; sourceTree = "<group>"; };
 		7BD0801652E8C0A25C0E155F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		87ADC6C62F9C85CB86BF265B /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
-		8D4DE0362AB69EB1B9E05076 /* KlickKlick.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KlickKlick.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8D4DE0362AB69EB1B9E05076 /* KlickKlick.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KlickKlick.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		930A6C374512F6515FC298AF /* MessageDeliveryTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageDeliveryTracker.swift; sourceTree = "<group>"; };
 		975E73020B1CE9F416CF8E77 /* KlickKlickApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlickKlickApp.swift; sourceTree = "<group>"; };
 		97CD7BBE048D41E689D5FC5F /* DutyCycleLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DutyCycleLedger.swift; sourceTree = "<group>"; };
@@ -219,7 +219,7 @@
 		D0A07CADF19743DA1595120B /* AudioFormats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFormats.swift; sourceTree = "<group>"; };
 		D15919E6EEF8F1C7A0435399 /* AudioToneDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioToneDecoder.swift; sourceTree = "<group>"; };
 		D2DADAC598ABDF0F2690CEA2 /* MorseSpeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseSpeed.swift; sourceTree = "<group>"; };
-		D6D48DECAF295F167C8F9F8A /* KlickKlickTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KlickKlickTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D6D48DECAF295F167C8F9F8A /* KlickKlickTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KlickKlickTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D6E0EF52CCFFA9B3C9F3CE32 /* MorseDemodulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseDemodulator.swift; sourceTree = "<group>"; };
 		DACE65D39908D378E54B5655 /* MeshRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshRelay.swift; sourceTree = "<group>"; };
 		E6F2ECF21A2BFC863EBC5A9E /* AudioUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioUtils.swift; sourceTree = "<group>"; };
@@ -289,6 +289,7 @@
 				F08CC0F691D11CAF41BE68A9 /* Sources */,
 				F51BB3C79AD9410DBF44CF67 /* Tests */,
 				AD625712AC11D7072B81CDF9 /* Products */,
+				AA969F022FC879B40095499B /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -356,6 +357,14 @@
 				BFA5D27268C493A8CEE7F6B4 /* RelayConfig.swift */,
 			);
 			path = Discovery;
+			sourceTree = "<group>";
+		};
+		AA969F022FC879B40095499B /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				"TEMP_A187E5B6-F886-4AF8-B17C-B1A36EA0BBEC" /* Signing.xcconfig */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 		AD625712AC11D7072B81CDF9 /* Products */ = {
@@ -480,14 +489,6 @@
 			path = UI;
 			sourceTree = "<group>";
 		};
-		"TEMP_858EB7F5-1A6E-4C8B-89D6-543A7B9B48E7" /* Klick */ = {
-			isa = PBXGroup;
-			children = (
-				"TEMP_A187E5B6-F886-4AF8-B17C-B1A36EA0BBEC" /* Signing.xcconfig */,
-			);
-			path = Klick;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -555,7 +556,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					2C0B6F4C3EE88E81492ABAE6 = {
 						DevelopmentTeam = 6QR7D5NLWL;
@@ -792,13 +793,12 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "DEBUG=1";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -812,6 +812,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_COMPILATION_MODE = singlefile;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -955,6 +956,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = s;
@@ -970,7 +972,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRIP_INSTALLED_PRODUCT = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = minimal;

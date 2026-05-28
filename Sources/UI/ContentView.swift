@@ -54,7 +54,6 @@ struct ContentView: View {
                 channelMembersCard
                 hintLine
                 Spacer(minLength: 0)
-                emergencyButton
                 pttButton
             }
             .padding(.horizontal, 16)
@@ -394,83 +393,11 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Emergency button
-
-    @State private var emergencyHoldProgress: Double = 0
-    @State private var emergencyHoldTimer: Timer?
-
-    private var emergencyButton: some View {
-        Group {
-            if session.emergencyFrom != nil {
-                // Incoming emergency alert banner
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("EMERGENCY · \(session.emergencyFrom?.uppercased() ?? "")")
-                        .font(DT.mono(11, weight: .heavy))
-                        .tracking(1)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(DT.tx)
-            } else {
-                // Emergency trigger — hold 3 seconds
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 11, weight: .bold))
-                    Text(session.canSendEmergency ? "HOLD 3s · EMERGENCY" : "COOLDOWN \(Int(session.emergencyCooldownRemaining))s")
-                        .font(DT.mono(10, weight: .bold))
-                        .tracking(1)
-                }
-                .foregroundStyle(session.canSendEmergency ? DT.tx : DT.textFaint)
-                .frame(maxWidth: .infinity)
-                .frame(height: 28)
-                .background(
-                    GeometryReader { geo in
-                        Rectangle()
-                            .fill(DT.tx.opacity(0.2))
-                            .frame(width: geo.size.width * emergencyHoldProgress)
-                    }
-                )
-                .overlay(Rectangle().strokeBorder(DT.tx.opacity(0.4), lineWidth: 1))
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { _ in startEmergencyHold() }
-                        .onEnded { _ in cancelEmergencyHold() }
-                )
-                .disabled(!session.isRunning || !session.canSendEmergency)
-            }
-        }
-    }
-
-    private func startEmergencyHold() {
-        guard emergencyHoldTimer == nil else { return }
-        emergencyHoldProgress = 0
-        emergencyHoldTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
-            Task { @MainActor in
-                emergencyHoldProgress += 0.05 / 3.0 // 3 seconds total
-                if emergencyHoldProgress >= 1.0 {
-                    cancelEmergencyHold()
-                    session.beginEmergency()
-                }
-            }
-        }
-    }
-
-    private func cancelEmergencyHold() {
-        emergencyHoldTimer?.invalidate()
-        emergencyHoldTimer = nil
-        if emergencyHoldProgress < 1.0 {
-            emergencyHoldProgress = 0
-        }
-    }
-
     // MARK: - PTT button (pinned bottom)
 
     private var pttButton: some View {
         PTTButton(
-            isTransmitting: session.isTransmitting && session.emergencyFrom == nil,
+            isTransmitting: session.isTransmitting,
             isEnabled: canTransmit,
             outboundLevel: session.outboundLevel,
             inboundLevel: session.inboundLevel,
@@ -479,12 +406,8 @@ struct ContentView: View {
                 session.beginTransmit()
             },
             onEnd: {
-                if session.emergencyFrom == DeviceName.current {
-                    session.endEmergency()
-                } else {
-                    session.playReleaseSound()
-                    session.endTransmit()
-                }
+                session.playReleaseSound()
+                session.endTransmit()
             }
         )
     }
