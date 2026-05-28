@@ -6,6 +6,7 @@ struct ChannelMembersView: View {
     @ObservedObject var session: PTTSession
     @Environment(\.dismiss) private var dismiss
     @State private var showingInvite = false
+    @State private var showingDeleteConfirm = false
 
     private var channel: Channel? { session.channelStore.activeChannel }
 
@@ -78,6 +79,18 @@ struct ChannelMembersView: View {
                         .background(DT.info)
                 }
                 .buttonStyle(.plain)
+
+                if session.channelStore.channels.count > 1 {
+                    Button(action: { showingDeleteConfirm = true }) {
+                        Text("DELETE CHANNEL")
+                            .walkieLabel(11, weight: .heavy, tracking: 2)
+                            .foregroundStyle(DT.tx)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                            .overlay(Rectangle().strokeBorder(DT.tx.opacity(0.5), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
@@ -85,6 +98,17 @@ struct ChannelMembersView: View {
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showingInvite) {
             InvitePeerSheet(session: session)
+        }
+        .alert("DELETE CHANNEL", isPresented: $showingDeleteConfirm) {
+            Button("DELETE", role: .destructive) {
+                if let id = channel?.id {
+                    session.channelStore.delete(id: id)
+                    dismiss()
+                }
+            }
+            Button("CANCEL", role: .cancel) {}
+        } message: {
+            Text("This will remove the channel and its key from this device. Other members are not affected.")
         }
     }
 
