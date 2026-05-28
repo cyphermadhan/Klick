@@ -142,6 +142,11 @@ targets:
     sources:
       - path: KlickWidget
       - path: Sources/LiveActivity
+    info:
+      path: KlickWidget/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: world.madhans.klick.widget
