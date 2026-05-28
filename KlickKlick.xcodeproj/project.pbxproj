@@ -737,6 +737,7 @@
 		524741875487CA360D567681 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEVELOPMENT_TEAM = 6QR7D5NLWL;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KlickWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -825,6 +826,7 @@
 		63853BB9B7C7B92B32C50C81 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEVELOPMENT_TEAM = 6QR7D5NLWL;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KlickWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

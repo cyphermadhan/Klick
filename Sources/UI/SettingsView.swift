@@ -20,7 +20,7 @@ struct SettingsView: View {
         NavigationStack {
             ZStack {
                 DT.bg.ignoresSafeArea()
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: true) {
                     VStack(spacing: 16) {
                         header
 

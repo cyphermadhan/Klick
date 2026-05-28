@@ -147,17 +147,26 @@ struct ChannelMembersView: View {
     }
 }
 
-/// Sub-sheet for picking an online peer to send a channel invite to.
+/// Sub-sheet for picking an online peer to send a channel invite to,
+/// or sharing an invite link via any messaging app.
 struct InvitePeerSheet: View {
     @ObservedObject var session: PTTSession
     @Environment(\.dismiss) private var dismiss
+    @State private var showingShareSheet = false
+
+    private var inviteLink: String? {
+        guard let channel = session.channelStore.activeChannel,
+              let key = session.channelStore.key(for: channel.id) else { return nil }
+        let pairing = PairingService()
+        return pairing.channelQRPayload(channelId: channel.id, channelKey: key, channelName: channel.name)
+    }
 
     var body: some View {
         ZStack {
             DT.bg.ignoresSafeArea()
             VStack(spacing: 14) {
                 HStack {
-                    Text("SEND INVITE")
+                    Text("INVITE")
                         .walkieLabel(13, weight: .heavy, tracking: 3)
                         .foregroundStyle(DT.text)
                     Spacer()
@@ -170,13 +179,32 @@ struct InvitePeerSheet: View {
                         .buttonStyle(.plain)
                 }
 
-                Text("TAP A PEER TO SEND CHANNEL INVITE")
-                    .walkieCaption()
-                    .foregroundStyle(DT.textFaint)
+                // MARK: Invite via link
+                TerminalFrame("SHARE LINK") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("SEND VIA ANY APP — RECIPIENT TAPS TO JOIN.")
+                            .walkieCaption()
+                            .foregroundStyle(DT.textFaint)
+                        Button(action: { showingShareSheet = true }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 12, weight: .bold))
+                                Text("SHARE INVITE LINK")
+                                    .walkieLabel(11, weight: .heavy, tracking: 2)
+                            }
+                            .foregroundStyle(DT.bg)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                            .background(DT.info)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
 
+                // MARK: Send to online peer directly
                 TerminalFrame("ONLINE PEERS") {
                     if session.directory.peers.isEmpty {
-                        Text("NO PEERS ONLINE")
+                        Text("NO PEERS NEARBY")
                             .walkieCaption()
                             .foregroundStyle(DT.textFaint)
                             .padding(.vertical, 8)
@@ -210,6 +238,13 @@ struct InvitePeerSheet: View {
             .padding(.vertical, 14)
         }
         .preferredColorScheme(.dark)
+        .sheet(isPresented: $showingShareSheet) {
+            if let link = inviteLink {
+                ShareSheet(items: [
+                    "Join my Klick channel: \(link)"
+                ])
+            }
+        }
     }
 
     private func sendInvite(to peer: PeerInfo) {
@@ -221,4 +256,15 @@ struct InvitePeerSheet: View {
         )
         dismiss()
     }
+}
+
+/// UIKit share sheet wrapped for SwiftUI.
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
