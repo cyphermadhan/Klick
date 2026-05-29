@@ -11,7 +11,7 @@ struct InviteReceivedView: View {
             VStack(spacing: 14) {
                 HStack {
                     Text("INVITES")
-                        .walkieLabel(13, weight: .heavy, tracking: 3)
+                        .walkieLabel(13, weight: .bold, tracking: 3)
                         .foregroundStyle(DT.text)
                     Spacer()
                     Button("CLOSE") { dismiss() }
@@ -67,7 +67,7 @@ struct InviteReceivedView: View {
                     if session.pendingInvites.isEmpty { dismiss() }
                 } label: {
                     Text("JOIN")
-                        .walkieLabel(11, weight: .heavy, tracking: 2)
+                        .walkieLabel(11, weight: .bold, tracking: 2)
                         .foregroundStyle(DT.bg)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)
@@ -79,7 +79,7 @@ struct InviteReceivedView: View {
                     if session.pendingInvites.isEmpty { dismiss() }
                 } label: {
                     Text("DECLINE")
-                        .walkieLabel(11, weight: .heavy, tracking: 2)
+                        .walkieLabel(11, weight: .bold, tracking: 2)
                         .foregroundStyle(DT.tx)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)

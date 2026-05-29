@@ -15,7 +15,7 @@ struct ChannelCreateView: View {
                 VStack(spacing: 20) {
                     HStack {
                         Text("NEW CHANNEL")
-                            .walkieLabel(13, weight: .heavy, tracking: 3)
+                            .walkieLabel(13, weight: .bold, tracking: 3)
                             .foregroundStyle(DT.text)
                         Spacer()
                         Button("CANCEL") { dismiss() }
@@ -47,7 +47,7 @@ struct ChannelCreateView: View {
                                 .foregroundStyle(DT.textFaint)
                             Button(action: createChannel) {
                                 Text("CREATE")
-                                    .walkieLabel(11, weight: .heavy, tracking: 2)
+                                    .walkieLabel(11, weight: .bold, tracking: 2)
                                     .foregroundStyle(DT.bg)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 36)
@@ -79,7 +79,7 @@ struct ChannelCreateView: View {
                                 .foregroundStyle(DT.textFaint)
                             Button(action: joinByPassphrase) {
                                 Text("JOIN")
-                                    .walkieLabel(11, weight: .heavy, tracking: 2)
+                                    .walkieLabel(11, weight: .bold, tracking: 2)
                                     .foregroundStyle(DT.bg)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 36)

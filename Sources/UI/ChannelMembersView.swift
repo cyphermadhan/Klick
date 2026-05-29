@@ -16,7 +16,7 @@ struct ChannelMembersView: View {
             VStack(spacing: 14) {
                 HStack {
                     Text("MEMBERS · \(channel?.displayName ?? "")")
-                        .walkieLabel(13, weight: .heavy, tracking: 3)
+                        .walkieLabel(13, weight: .bold, tracking: 3)
                         .foregroundStyle(DT.text)
                     Spacer()
                     Button("DONE") { dismiss() }
@@ -72,7 +72,7 @@ struct ChannelMembersView: View {
 
                 Button(action: { showingInvite = true }) {
                     Text("INVITE PEER")
-                        .walkieLabel(13, weight: .heavy, tracking: 3)
+                        .walkieLabel(13, weight: .bold, tracking: 3)
                         .foregroundStyle(DT.bg)
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
@@ -83,7 +83,7 @@ struct ChannelMembersView: View {
                 if session.channelStore.channels.count > 1 {
                     Button(action: { showingDeleteConfirm = true }) {
                         Text("DELETE CHANNEL")
-                            .walkieLabel(11, weight: .heavy, tracking: 2)
+                            .walkieLabel(11, weight: .bold, tracking: 2)
                             .foregroundStyle(DT.tx)
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
@@ -167,7 +167,7 @@ struct InvitePeerSheet: View {
             VStack(spacing: 14) {
                 HStack {
                     Text("INVITE")
-                        .walkieLabel(13, weight: .heavy, tracking: 3)
+                        .walkieLabel(13, weight: .bold, tracking: 3)
                         .foregroundStyle(DT.text)
                     Spacer()
                     Button("CANCEL") { dismiss() }
@@ -190,7 +190,7 @@ struct InvitePeerSheet: View {
                                 Image(systemName: "square.and.arrow.up")
                                     .font(.system(size: 12, weight: .bold))
                                 Text("SHARE INVITE LINK")
-                                    .walkieLabel(11, weight: .heavy, tracking: 2)
+                                    .walkieLabel(11, weight: .bold, tracking: 2)
                             }
                             .foregroundStyle(DT.bg)
                             .frame(maxWidth: .infinity)
