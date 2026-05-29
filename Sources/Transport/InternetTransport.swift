@@ -14,8 +14,8 @@ final class InternetTransport: AudioTransport, @unchecked Sendable {
     private let log = Logger(subsystem: "world.madhans.klick", category: "InternetTransport")
 
     private let channelKey: Data
+    private let urlSession: URLSession
     private var webSocketTask: URLSessionWebSocketTask?
-    private var urlSession: URLSession?
     private var selfName: String?
     private var outgoingSequence: UInt32 = 0
     private var isConnected = false
@@ -29,6 +29,8 @@ final class InternetTransport: AudioTransport, @unchecked Sendable {
 
     init(channelKey: Data) {
         self.channelKey = channelKey
+        // Create URLSession on the calling thread (main) — not inside queue.async
+        self.urlSession = URLSession(configuration: .default)
     }
 
     func start(advertisingAs serviceName: String) throws {
@@ -112,9 +114,7 @@ final class InternetTransport: AudioTransport, @unchecked Sendable {
                 return
             }
 
-            let session = URLSession(configuration: .default)
-            let task = session.webSocketTask(with: url)
-            self.urlSession = session
+            let task = self.urlSession.webSocketTask(with: url)
             self.webSocketTask = task
             task.resume()
 
