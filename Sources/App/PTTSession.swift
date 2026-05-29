@@ -264,8 +264,6 @@ final class PTTSession: ObservableObject {
             return
         }
 
-        self.transports = startedTransports
-
         // Internet transport — always start if we have a channel key.
         // Runs alongside local transports for worldwide reach.
         if let key = channelKey {
@@ -274,6 +272,8 @@ final class PTTSession: ObservableObject {
             try? internet.start(advertisingAs: name)
             startedTransports[.internet] = internet
         }
+
+        self.transports = startedTransports
 
         // Apply discoverability preference. When hidden, we browse but don't advertise.
         if !DiscoverabilityStore.isDiscoverable {
@@ -808,6 +808,18 @@ final class PTTSession: ObservableObject {
 
         // Reset peer selection — user re-selects for the new channel
         selectedPeers.removeAll()
+
+        // Reconnect internet transport to the new channel's relay room.
+        if let oldInternet = transports[.internet] {
+            oldInternet.stop()
+            transports.removeValue(forKey: .internet)
+        }
+        if let key = channelKey {
+            let internet = InternetTransport(channelKey: key)
+            wireTransport(internet)
+            try? internet.start(advertisingAs: DeviceName.current)
+            transports[.internet] = internet
+        }
     }
 }
 
