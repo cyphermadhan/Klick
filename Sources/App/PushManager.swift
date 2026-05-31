@@ -3,8 +3,6 @@ import UIKit
 import os
 
 /// Manages push notification registration and ping-offline-peers requests.
-/// Registers the APNs device token with the relay so offline members
-/// can be notified when someone is waiting in the channel.
 @MainActor
 final class PushManager: NSObject, ObservableObject {
     private let log = Logger(subsystem: "world.madhans.klick", category: "PushManager")
@@ -37,17 +35,10 @@ final class PushManager: NSObject, ObservableObject {
             "name": deviceName
         ])
 
-        Task.detached { [log] in
-            do {
-                let (_, _) = try await URLSession.shared.data(for: request)
-            } catch {
-                log.error("Push register failed: \(error.localizedDescription, privacy: .public)")
-            }
-        }
+        PushNetworkClient.fire(request)
     }
 
-    /// Ping offline members of a channel — sends push notification to anyone
-    /// registered but not currently connected via WebSocket.
+    /// Ping offline members of a channel.
     func pingOfflineMembers(channelKey: Data, senderName: String) {
         let roomId = RelayConfig.roomId(forKey: channelKey)
         let baseURL = RelayConfig.activeURL.replacingOccurrences(of: "wss://", with: "https://")
@@ -61,12 +52,30 @@ final class PushManager: NSObject, ObservableObject {
             "senderName": senderName
         ])
 
-        Task.detached { [log] in
-            do {
-                let (_, _) = try await URLSession.shared.data(for: request)
-            } catch {
-                log.error("Ping failed: \(error.localizedDescription, privacy: .public)")
+        PushNetworkClient.fire(request)
+    }
+}
+
+/// Isolated network client that owns its own URLSession and dispatch queue.
+/// Completely detached from @MainActor — avoids iOS 26 URLSession restrictions.
+private enum PushNetworkClient {
+    private static let queue = DispatchQueue(label: "klick.push.network", qos: .utility)
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 10
+        return URLSession(configuration: config, delegate: nil, delegateQueue: OperationQueue())
+    }()
+
+    static func fire(_ request: URLRequest) {
+        queue.async {
+            // Use old-school semaphore-based sync call on a background queue.
+            // This avoids ALL actor isolation issues — no async, no shared, no captures.
+            let sem = DispatchSemaphore(value: 0)
+            let task = session.dataTask(with: request) { _, _, _ in
+                sem.signal()
             }
+            task.resume()
+            _ = sem.wait(timeout: .now() + 10)
         }
     }
 }
