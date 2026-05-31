@@ -19,8 +19,9 @@ struct SettingsView: View {
     var body: some View {
         ZStack {
             DT.bg.ignoresSafeArea()
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 16) {
+            GeometryReader { geo in
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 16) {
                         header
 
                         TerminalFrame("IDENTITY") {
@@ -251,8 +252,9 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
+                    .frame(width: geo.size.width)
                 }
-
+            }
         }
         .navigationBarHidden(true)
         .preferredColorScheme(.dark)
