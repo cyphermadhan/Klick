@@ -20,7 +20,7 @@ struct SettingsView: View {
         NavigationStack {
             ZStack {
                 DT.bg.ignoresSafeArea()
-                ScrollView(.vertical, showsIndicators: true) {
+                ScrollView(.vertical) {
                     VStack(spacing: 16) {
                         header
 
@@ -252,6 +252,13 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .onAppear {
+                    // iOS 26: prevent horizontal bounce on vertical-only ScrollView
+                    UIScrollView.appearance().alwaysBounceHorizontal = false
+                    UIScrollView.appearance().showsHorizontalScrollIndicator = false
                 }
             }
             .preferredColorScheme(.dark)
