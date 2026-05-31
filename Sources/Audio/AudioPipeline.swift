@@ -19,7 +19,7 @@ final class AudioPipeline: ObservableObject {
     /// Downstream hook for outgoing Opus frames. Set this in M2+ to send over UDP.
     var onOutgoingFrame: ((Data) -> Void)?
 
-    private var capture: AudioCapture?
+    private(set) var capture: AudioCapture?
     private var playback: AudioPlayback?
     private let log = Logger(subsystem: "world.madhans.klick", category: "AudioPipeline")
 
@@ -37,8 +37,11 @@ final class AudioPipeline: ObservableObject {
             try playback.start()
             capture.onFrame = { [weak self] packet in
                 guard let self else { return }
-                // AudioCapture's onFrame fires on a background audio thread.
-                // Hop to the main actor for any observable state reads/writes.
+                // Only process frames when there's somewhere to send them.
+                // Dropping idle frames prevents voice-processing artifacts
+                // (distortion noise) from leaking to the output when the user
+                // isn't transmitting.
+                guard self.loopback || self.onOutgoingFrame != nil else { return }
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     if self.loopback {

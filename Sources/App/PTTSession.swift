@@ -371,12 +371,14 @@ final class PTTSession: ObservableObject {
             errorMessage = "BROADCAST MODE · ONLY CREATOR CAN TRANSMIT"
             return
         }
+        pipeline.capture?.isMuted = false
         isTransmitting = true
         updateLiveActivity()
     }
 
     func endTransmit() {
         isTransmitting = false
+        pipeline.capture?.isMuted = true
         outboundLevel = 0
         updateLiveActivity()
     }

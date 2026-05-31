@@ -16,6 +16,10 @@ final class AudioCapture {
     /// Fires once per 20 ms frame of captured audio. Payload is the encoded Opus packet.
     var onFrame: ((Data) -> Void)?
 
+    /// When true, captured audio is discarded without encoding or calling onFrame.
+    /// Prevents voice-processing artifacts from leaking when not transmitting.
+    var isMuted = true
+
     init() throws {
         self.encoder = try OpusEncoder()
     }
@@ -72,6 +76,8 @@ final class AudioCapture {
     }
 
     private func handleInput(_ buffer: AVAudioPCMBuffer) {
+        // When muted, discard audio without encoding — prevents artifacts.
+        guard !isMuted else { return }
         // Step 1: convert to target PCM if needed.
         let targetBuffer: AVAudioPCMBuffer
         if let conv = formatConverter {
