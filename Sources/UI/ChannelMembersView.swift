@@ -158,7 +158,10 @@ struct InvitePeerSheet: View {
         guard let channel = session.channelStore.activeChannel,
               let key = session.channelStore.key(for: channel.id) else { return nil }
         let pairing = PairingService()
-        return pairing.channelQRPayload(channelId: channel.id, channelKey: key, channelName: channel.name)
+        let payload = pairing.channelQRPayload(channelId: channel.id, channelKey: key, channelName: channel.name)
+        // URL-encode the payload so it's a tappable link that opens the app
+        let encoded = payload.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? payload
+        return "klick://join?payload=\(encoded)"
     }
 
     var body: some View {

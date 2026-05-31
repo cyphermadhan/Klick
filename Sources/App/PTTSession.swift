@@ -116,6 +116,30 @@ final class PTTSession: ObservableObject {
         wireCallManager()
         wirePTTIntentObserver()
         wirePushToken()
+        wireDeepLinkObserver()
+    }
+
+    private func wireDeepLinkObserver() {
+        NotificationCenter.default.addObserver(
+            forName: .didReceiveChannelInviteLink,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let payload = notification.object as? String else { return }
+            Task { @MainActor in
+                guard let self else { return }
+                let pairing = PairingService()
+                if let channelInfo = pairing.parseChannelQR(payload) {
+                    let member = ChannelMember(name: DeviceName.current, addedAt: .now)
+                    let channel = self.channelStore.create(
+                        name: channelInfo.channelName,
+                        key: channelInfo.channelKey,
+                        members: [member]
+                    )
+                    self.switchChannel(to: channel.id)
+                }
+            }
+        }
     }
 
     private func wirePushToken() {

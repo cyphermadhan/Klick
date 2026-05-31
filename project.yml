@@ -109,6 +109,10 @@ targets:
         # under US EAR 740.17(b). Declaring NO means we don't need a year
         # review submission with each TestFlight build.
         ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: world.madhans.klick
+            CFBundleURLSchemes:
+              - klick
         UIBackgroundModes:
           - audio
           - voip
