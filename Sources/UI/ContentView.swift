@@ -66,7 +66,7 @@ struct ContentView: View {
         // Legacy single-param onChange — the two-param form is iOS 17+
         // and the project deploys back to iOS 16.
         .onChange(of: scenePhase) { newPhase in handleScenePhase(newPhase) }
-        .fullScreenCover(isPresented: $showingSettings) {
+        .sheet(isPresented: $showingSettings) {
             SettingsView(radio: session.radio,
                          meshLink: session.meshLink as? CoreBluetoothMeshtasticLink)
         }

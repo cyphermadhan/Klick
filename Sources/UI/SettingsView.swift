@@ -19,8 +19,8 @@ struct SettingsView: View {
     var body: some View {
         ZStack {
             DT.bg.ignoresSafeArea()
-            ScrollView {
-                    VStack(spacing: 16) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 16) {
                         header
 
                         TerminalFrame("IDENTITY") {
