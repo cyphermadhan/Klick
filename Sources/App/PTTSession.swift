@@ -119,20 +119,24 @@ final class PTTSession: ObservableObject {
     }
 
     private func wirePushToken() {
-        NotificationCenter.default.addObserver(
-            forName: .didReceiveAPNsToken,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            let tokenData = notification.object as? Data
-            Task { @MainActor in
-                guard let self, let tokenData else { return }
-                self.pushManager.didRegisterToken(tokenData)
-                if let key = self.channelKey {
-                    self.pushManager.registerWithRelay(channelKey: key, deviceName: DeviceName.current)
-                }
-            }
-        }
+        // Push notifications require APNs key setup in the relay.
+        // Disabled until APNS_KEY secrets are configured via wrangler.
+        // Uncomment when push is ready:
+        //
+        // NotificationCenter.default.addObserver(
+        //     forName: .didReceiveAPNsToken,
+        //     object: nil,
+        //     queue: .main
+        // ) { [weak self] notification in
+        //     let tokenData = notification.object as? Data
+        //     Task { @MainActor in
+        //         guard let self, let tokenData else { return }
+        //         self.pushManager.didRegisterToken(tokenData)
+        //         if let key = self.channelKey {
+        //             self.pushManager.registerWithRelay(channelKey: key, deviceName: DeviceName.current)
+        //         }
+        //     }
+        // }
     }
 
     private func wireCameraControl() {
