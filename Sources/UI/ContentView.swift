@@ -43,33 +43,33 @@ struct ContentView: View {
     private let levelTick = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ZStack {
-            DT.bg.ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                DT.bg.ignoresSafeArea()
 
-            VStack(spacing: 12) {
-                brandStrip
-                navPills
-                statusTiles
-                diagnosticStrip
-                channelMembersCard
-                hintLine
-                Spacer(minLength: 0)
-                pttButton
+                VStack(spacing: 12) {
+                    brandStrip
+                    navPills
+                    statusTiles
+                    diagnosticStrip
+                    channelMembersCard
+                    hintLine
+                    Spacer(minLength: 0)
+                    pttButton
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 12)
+            .toolbar(.hidden)
+            .navigationDestination(isPresented: $showingSettings) {
+                SettingsView(radio: session.radio,
+                             meshLink: session.meshLink as? CoreBluetoothMeshtasticLink)
+            }
         }
         .preferredColorScheme(.dark)
-        .toolbar(.hidden)
         .onReceive(levelTick) { _ in session.tickLevels() }
-        // Legacy single-param onChange — the two-param form is iOS 17+
-        // and the project deploys back to iOS 16.
         .onChange(of: scenePhase) { newPhase in handleScenePhase(newPhase) }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView(radio: session.radio,
-                         meshLink: session.meshLink as? CoreBluetoothMeshtasticLink)
-        }
         .sheet(isPresented: $showingChat) {
             ChatView(session: session, tracker: session.deliveryTracker)
         }

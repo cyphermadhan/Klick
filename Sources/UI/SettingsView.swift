@@ -254,6 +254,7 @@ struct SettingsView: View {
                 }
 
         }
+        .navigationBarHidden(true)
         .preferredColorScheme(.dark)
         .confirmationDialog(
             "REMOVE PAIRED KEY?",
