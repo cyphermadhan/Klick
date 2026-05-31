@@ -17,10 +17,9 @@ struct SettingsView: View {
     @State private var unpaired = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                DT.bg.ignoresSafeArea()
-                ScrollView(.vertical) {
+        ZStack {
+            DT.bg.ignoresSafeArea()
+            ScrollView(.vertical) {
                     VStack(spacing: 16) {
                         header
 
@@ -260,22 +259,21 @@ struct SettingsView: View {
                     UIScrollView.appearance().alwaysBounceHorizontal = false
                     UIScrollView.appearance().showsHorizontalScrollIndicator = false
                 }
+        }
+        .preferredColorScheme(.dark)
+        .interactiveDismissDisabled(false)
+        .confirmationDialog(
+            "REMOVE PAIRED KEY?",
+            isPresented: $showingUnpairConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("UNPAIR", role: .destructive) {
+                try? PairingService().unpair()
+                unpaired = true
             }
-            .preferredColorScheme(.dark)
-            .toolbar(.hidden)
-            .confirmationDialog(
-                "REMOVE PAIRED KEY?",
-                isPresented: $showingUnpairConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("UNPAIR", role: .destructive) {
-                    try? PairingService().unpair()
-                    unpaired = true
-                }
-                Button("CANCEL", role: .cancel) {}
-            } message: {
-                Text("YOU'LL NEED TO RE-SCAN A QR CODE TO TALK AGAIN.")
-            }
+            Button("CANCEL", role: .cancel) {}
+        } message: {
+            Text("YOU'LL NEED TO RE-SCAN A QR CODE TO TALK AGAIN.")
         }
     }
 
