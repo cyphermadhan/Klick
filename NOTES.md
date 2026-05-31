@@ -3,9 +3,9 @@
 Working notes. Updated ad-hoc. Source of truth for "what's done", "what's
 broken", and "what we're holding off on until hardware arrives."
 
-Last updated: 2026-05-28
-Current version: `0.5.0` / build `6`
-Test count: 104 unit tests, green on iPhone 16 simulator.
+Last updated: 2026-05-31
+Current version: `0.5.0` / build `7`
+Test count: 104 unit tests, green on iPhone 17 Pro simulator.
 
 ---
 
@@ -159,6 +159,21 @@ Test count: 104 unit tests, green on iPhone 16 simulator.
 ---
 
 ## Known bugs / unfixed
+
+### ✅ iOS 26 ScrollView + TextField horizontal drift — **fixed in build 7**
+Settings page moved horizontally due to iOS 26 changing how TextField's internal DragGesture interacts with parent ScrollView. Fix: `GeometryReader { geo in ScrollView(.vertical) { VStack { ... }.frame(width: geo.size.width) } }` — pins content width so the leaked gesture has nowhere to go.
+
+### ✅ iOS 26 URLSession crashes — **fixed in build 7**
+`URLSession(configuration:)` inside `DispatchQueue.async` and `URLSession.shared.dataTask` from `@MainActor` both crash with EXC_BREAKPOINT on iOS 26. Fix: create URLSession in `init()`, use `Task.detached` + dedicated session with own OperationQueue for HTTP calls.
+
+### ✅ InternetTransport not registered on channel switch — **fixed in build 7**
+Internet transport was started AFTER `self.transports` was assigned (never in routing dict). Also `switchChannel()` didn't reconnect WebSocket to new room. Fixed both.
+
+### ✅ Push token registration disabled — **deferred**
+Push notifications via relay crash on iOS 26 due to URLSession restrictions even with all workarounds. Disabled until APNs keys configured and iOS 26 SDK stabilizes.
+
+### ✅ AVCaptureEventInteraction removed from iOS 26 SDK — **stubbed**
+Camera Control button PTT uses `AVCaptureEventInteraction` (iOS 17.2–25) which was removed from the iOS 26 SDK. Class stubbed as no-op. Will re-enable when Apple provides replacement.
 
 ### ✅ Audio listen crash — **fixed in build 5**
 TestFlight 0.4.0/4 produced a symbolicated crash log (Thread 2, EXC_BREAKPOINT inside `_dispatch_assert_queue_fail`). Stack:
