@@ -17,9 +17,10 @@ struct SettingsView: View {
     @State private var unpaired = false
 
     var body: some View {
-        ZStack {
-            DT.bg.ignoresSafeArea()
-            ScrollView(.vertical) {
+        NavigationStack {
+            ZStack {
+                DT.bg.ignoresSafeArea()
+                ScrollView {
                     VStack(spacing: 16) {
                         header
 
@@ -251,29 +252,23 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
-                    .frame(maxWidth: .infinity)
                 }
-                .scrollDismissesKeyboard(.interactively)
-                .onAppear {
-                    // iOS 26: prevent horizontal bounce on vertical-only ScrollView
-                    UIScrollView.appearance().alwaysBounceHorizontal = false
-                    UIScrollView.appearance().showsHorizontalScrollIndicator = false
-                }
-        }
-        .preferredColorScheme(.dark)
-        .interactiveDismissDisabled(false)
-        .confirmationDialog(
-            "REMOVE PAIRED KEY?",
-            isPresented: $showingUnpairConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("UNPAIR", role: .destructive) {
-                try? PairingService().unpair()
-                unpaired = true
             }
-            Button("CANCEL", role: .cancel) {}
-        } message: {
-            Text("YOU'LL NEED TO RE-SCAN A QR CODE TO TALK AGAIN.")
+            .preferredColorScheme(.dark)
+            .toolbar(.hidden)
+            .confirmationDialog(
+                "REMOVE PAIRED KEY?",
+                isPresented: $showingUnpairConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("UNPAIR", role: .destructive) {
+                    try? PairingService().unpair()
+                    unpaired = true
+                }
+                Button("CANCEL", role: .cancel) {}
+            } message: {
+                Text("YOU'LL NEED TO RE-SCAN A QR CODE TO TALK AGAIN.")
+            }
         }
     }
 
