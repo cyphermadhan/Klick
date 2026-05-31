@@ -13,8 +13,15 @@ final class InternetTransport: AudioTransport, @unchecked Sendable {
     private let queue = DispatchQueue(label: "klick.internet", qos: .userInitiated)
     private let log = Logger(subsystem: "world.madhans.klick", category: "InternetTransport")
 
+    /// Shared URLSession for all InternetTransport instances.
+    /// Created once as a static to avoid iOS 26 URLSession init crashes.
+    private static let sharedSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        return URLSession(configuration: config)
+    }()
+
     private let channelKey: Data
-    private let urlSession: URLSession
     private var webSocketTask: URLSessionWebSocketTask?
     private var selfName: String?
     private var outgoingSequence: UInt32 = 0
@@ -29,8 +36,6 @@ final class InternetTransport: AudioTransport, @unchecked Sendable {
 
     init(channelKey: Data) {
         self.channelKey = channelKey
-        // Create URLSession on the calling thread (main) — not inside queue.async
-        self.urlSession = URLSession(configuration: .default)
     }
 
     func start(advertisingAs serviceName: String) throws {
@@ -114,7 +119,7 @@ final class InternetTransport: AudioTransport, @unchecked Sendable {
                 return
             }
 
-            let task = self.urlSession.webSocketTask(with: url)
+            let task = Self.sharedSession.webSocketTask(with: url)
             self.webSocketTask = task
             task.resume()
 
