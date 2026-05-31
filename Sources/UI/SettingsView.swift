@@ -110,13 +110,13 @@ struct SettingsView: View {
                                         .font(DT.mono(10, weight: .bold))
                                         .foregroundStyle(customRelayURL.isEmpty ? DT.ok : DT.info)
                                 }
-                                TextField("wss://your-relay.workers.dev", text: $customRelayURL)
+                                TextField("CUSTOM URL", text: $customRelayURL)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
-                                    .keyboardType(.URL)
                                     .font(DT.mono(12, weight: .regular))
                                     .foregroundStyle(DT.text)
                                     .tint(DT.info)
+                                    .lineLimit(1)
                                     .padding(.vertical, 6)
                                     .padding(.horizontal, 8)
                                     .background(DT.panel)
@@ -252,8 +252,8 @@ struct SettingsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
-                    .fixedSize(horizontal: false, vertical: false)
                 }
+
             }
             .preferredColorScheme(.dark)
             .toolbar(.hidden)
