@@ -25,7 +25,8 @@ final class PushManager: NSObject, ObservableObject {
     func registerWithRelay(channelKey: Data, deviceName: String) {
         guard let token = deviceToken else { return }
         let roomId = RelayConfig.roomId(forKey: channelKey)
-        let url = URL(string: "\(RelayConfig.activeURL.replacingOccurrences(of: "wss://", with: "https://"))/register")!
+        let baseURL = RelayConfig.activeURL.replacingOccurrences(of: "wss://", with: "https://")
+        guard let url = URL(string: "\(baseURL)/register") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -36,18 +37,21 @@ final class PushManager: NSObject, ObservableObject {
             "name": deviceName
         ])
 
-        URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
-            if let error {
-                self?.log.error("Push register failed: \(error.localizedDescription, privacy: .public)")
+        Task.detached { [log] in
+            do {
+                let (_, _) = try await URLSession.shared.data(for: request)
+            } catch {
+                log.error("Push register failed: \(error.localizedDescription, privacy: .public)")
             }
-        }.resume()
+        }
     }
 
     /// Ping offline members of a channel — sends push notification to anyone
     /// registered but not currently connected via WebSocket.
     func pingOfflineMembers(channelKey: Data, senderName: String) {
         let roomId = RelayConfig.roomId(forKey: channelKey)
-        let url = URL(string: "\(RelayConfig.activeURL.replacingOccurrences(of: "wss://", with: "https://"))/ping")!
+        let baseURL = RelayConfig.activeURL.replacingOccurrences(of: "wss://", with: "https://")
+        guard let url = URL(string: "\(baseURL)/ping") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -57,10 +61,12 @@ final class PushManager: NSObject, ObservableObject {
             "senderName": senderName
         ])
 
-        URLSession.shared.dataTask(with: request) { [weak self] _, _, error in
-            if let error {
-                self?.log.error("Ping failed: \(error.localizedDescription, privacy: .public)")
+        Task.detached { [log] in
+            do {
+                let (_, _) = try await URLSession.shared.data(for: request)
+            } catch {
+                log.error("Ping failed: \(error.localizedDescription, privacy: .public)")
             }
-        }.resume()
+        }
     }
 }
