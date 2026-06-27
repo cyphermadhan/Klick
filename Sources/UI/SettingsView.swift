@@ -6,8 +6,12 @@ struct SettingsView: View {
     /// Optional mesh link, forwarded to `RadioView` so its PAIR sheet can
     /// drive a real BLE scan. Nil in previews / unit tests.
     var meshLink: CoreBluetoothMeshtasticLink?
+    /// Optional callback for the RESET LINK row. Hidden when nil so
+    /// previews / unit tests don't need a session.
+    var onResetLink: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = DeviceName.current
+    @State private var isResetting = false
     @State private var rangeMode: RangeMode = RangeModeStore.current
     @State private var region: Region = RegionStore.current
     @State private var discoverable: Bool = DiscoverabilityStore.isDiscoverable
@@ -81,6 +85,38 @@ struct SettingsView: View {
                                 Text("RELAY PACKETS FOR PEERS NOT IN DIRECT RANGE.")
                                     .walkieCaption()
                                     .foregroundStyle(DT.textFaint)
+
+                                if let onResetLink {
+                                    Rectangle().fill(DT.border).frame(height: 1).opacity(0.4)
+
+                                    Button {
+                                        guard !isResetting else { return }
+                                        isResetting = true
+                                        onResetLink()
+                                        // Re-enable after a beat — the
+                                        // actual stop/start is async on
+                                        // the session, but the button
+                                        // shouldn't be tappable mid-cycle.
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                            isResetting = false
+                                        }
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "arrow.clockwise")
+                                            Text(isResetting ? "RESETTING…" : "RESET LINK")
+                                                .walkieLabel(12)
+                                        }
+                                        .foregroundStyle(DT.warn)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .overlay(Rectangle().strokeBorder(DT.warn.opacity(0.7), lineWidth: 1))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(isResetting)
+                                    Text("REBUILDS TRANSPORTS. USE WHEN PEERS GO STALE OR AUDIO STOPS FLOWING ONE-WAY.")
+                                        .walkieCaption()
+                                        .foregroundStyle(DT.textFaint)
+                                }
                             }
                         }
 
@@ -96,6 +132,9 @@ struct SettingsView: View {
                                 Text("CHANGES APPLY AFTER YOU RESTART THE SESSION (STOP → START).")
                                     .walkieCaption()
                                     .foregroundStyle(DT.textFaint)
+                                Text("LOCK-SCREEN AUDIO WORKS OVER WIFI AND INTERNET ONLY. NEARBY (BLUETOOTH/AWDL) NEEDS THE APP FOREGROUNDED.")
+                                    .walkieCaption()
+                                    .foregroundStyle(DT.warn)
                             }
                         }
 

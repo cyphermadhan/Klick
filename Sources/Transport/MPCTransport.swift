@@ -121,6 +121,20 @@ final class MPCTransport: NSObject, AudioTransport, @unchecked Sendable {
         }
     }
 
+    /// Re-kick the browser without touching the existing MCSession.
+    /// MPC's browser is sticky but does NOT re-emit `foundPeer` for peers
+    /// already known — so after a channel switch (or any stale-state
+    /// moment), peers that came online during the gap may never surface
+    /// without this nudge.
+    func refreshDiscovery() {
+        queue.async { [weak self] in
+            guard let self, let browser = self.browser else { return }
+            browser.stopBrowsingForPeers()
+            browser.startBrowsingForPeers()
+            self.log.info("MPC browser refreshed")
+        }
+    }
+
     func sendAudio(opusPayload: Data, nonce: Data, to peer: PeerInfo) {
         guard peer.transport == .nearby else { return }
         queue.async { [weak self] in

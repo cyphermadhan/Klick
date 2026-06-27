@@ -32,11 +32,10 @@
 		42092AFF19F75A956D09E7B6 /* RegionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB368A79D34D2393B14E772 /* RegionTests.swift */; };
 		478BE561068A82CFB6D286D4 /* KlickKlickApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975E73020B1CE9F416CF8E77 /* KlickKlickApp.swift */; };
 		4859E9547C24CC06BEA55194 /* AudioFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A07CADF19743DA1595120B /* AudioFormats.swift */; };
+		49259D60CD704B97ECA1F0C4 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115157ACFA217102D3427FA1 /* ShareSheet.swift */; };
 		4B4364899469F91B8993CEE3 /* Sodium in Frameworks */ = {isa = PBXBuildFile; productRef = F10530C77DB19FA00A06BC90 /* Sodium */; };
-		4B7EB5CF326C3D0DEFE9AEC6 /* PassphraseJoin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12580B5BC33A36550850EB91 /* PassphraseJoin.swift */; };
 		4BBFFE9BCEF27956F6276618 /* PlaceholderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87ADC6C62F9C85CB86BF265B /* PlaceholderTests.swift */; };
 		4E9BC198D1FFBEB5AD3ACF57 /* PTTSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62681C5795645642F70C3A27 /* PTTSession.swift */; };
-		4F806BEFE86B0F33D3FF534B /* BroadcastInvite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75572504CBDD798E3AD12BC7 /* BroadcastInvite.swift */; };
 		515FFDEDDF4484F6502521E6 /* MPCTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 616327330400F0B0ADD846C0 /* MPCTransport.swift */; };
 		532E511793844A04BD3AC008 /* MeshtasticProtoCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0224FB1C92119C80145E026 /* MeshtasticProtoCodecTests.swift */; };
 		53A8F8C4D729D5D7418CE5A7 /* MessageDeliveryTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22684D4C087162EF27A1595F /* MessageDeliveryTrackerTests.swift */; };
@@ -96,6 +95,7 @@
 		F0CCC319A28C88E60BCB5907 /* MorseDemodulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7708EC5D625E3A660A871B51 /* MorseDemodulatorTests.swift */; };
 		F10B8D54AE74CE33CC2E19EA /* AudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = C86A611162EB4AB29CBD4182 /* AudioCapture.swift */; };
 		F22CBC469D1FBE6C2E49FF54 /* ChannelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD8831664FE7CD9CB8AD3351 /* ChannelStore.swift */; };
+		F33D427D56644CB1AE012A9F /* InviteLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = F521D6883EE02FDF28184E81 /* InviteLink.swift */; };
 		F403B3F8CAE4E35AC93B77B8 /* FlashlightBeacon.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F26B84FE9BC641F6F8485B /* FlashlightBeacon.swift */; };
 		F40DF069CE1D0C1C7F1BBE51 /* OpusCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413547B6B5B1FBCEED1FB57F /* OpusCodec.swift */; };
 		FB3F33F64A7C2463B1E01084 /* AudioPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03AEC384CDC96C142A1CE1E1 /* AudioPipeline.swift */; };
@@ -142,7 +142,7 @@
 		087C623B5466F6899F9330A4 /* KlickWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = KlickWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C1B7C0C74CC20A1F2E72796 /* TogglePTTIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TogglePTTIntent.swift; sourceTree = "<group>"; };
 		0C6D06E100E5A3E197886343 /* LoRaBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoRaBridge.swift; sourceTree = "<group>"; };
-		12580B5BC33A36550850EB91 /* PassphraseJoin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassphraseJoin.swift; sourceTree = "<group>"; };
+		115157ACFA217102D3427FA1 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		129247B9612BEC599B57853B /* CryptoServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoServiceTests.swift; sourceTree = "<group>"; };
 		14E92AB2E52589E1EF00AA6E /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		150201850050EAD328838ADD /* UDPTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDPTransportTests.swift; sourceTree = "<group>"; };
@@ -176,7 +176,6 @@
 		628BAE41B275C8980B36778E /* DutyCycleLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DutyCycleLedgerTests.swift; sourceTree = "<group>"; };
 		67744680E27063DCC8FE5F28 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		6FE382B34ACC530FF2392250 /* KlickWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KlickWidgetBundle.swift; sourceTree = "<group>"; };
-		75572504CBDD798E3AD12BC7 /* BroadcastInvite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BroadcastInvite.swift; sourceTree = "<group>"; };
 		7708EC5D625E3A660A871B51 /* MorseDemodulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseDemodulatorTests.swift; sourceTree = "<group>"; };
 		78616869EE1C43E641FB3577 /* PeerDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerDirectory.swift; sourceTree = "<group>"; };
 		78CE62140BCFC1094E48E491 /* PeerListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerListView.swift; sourceTree = "<group>"; };
@@ -228,8 +227,9 @@
 		F205DA74ACDB78BAD9C861D8 /* PushManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushManager.swift; sourceTree = "<group>"; };
 		F3A14F51FA22484C0D90198D /* walkie-release.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "walkie-release.mp3"; sourceTree = "<group>"; };
 		F4CD2AC8A254FE0BE69421F6 /* ProtobufWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtobufWire.swift; sourceTree = "<group>"; };
+		F521D6883EE02FDF28184E81 /* InviteLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteLink.swift; sourceTree = "<group>"; };
 		FEC80F6C6E752051169D6A33 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
-		"TEMP_0BFC16BF-9066-403D-B1B0-9F765A1F15A8" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		"TEMP_9F5F0B87-E36E-4832-9AC6-B78F2F71D223" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -402,11 +402,10 @@
 		CCD1B9447F6F269946CA57C1 /* Channel */ = {
 			isa = PBXGroup;
 			children = (
-				75572504CBDD798E3AD12BC7 /* BroadcastInvite.swift */,
 				08321364C5092E900B6C6CA7 /* Channel.swift */,
 				24531DA30B449AF3CC1107B2 /* ChannelInvite.swift */,
 				BD8831664FE7CD9CB8AD3351 /* ChannelStore.swift */,
-				12580B5BC33A36550850EB91 /* PassphraseJoin.swift */,
+				F521D6883EE02FDF28184E81 /* InviteLink.swift */,
 			);
 			path = Channel;
 			sourceTree = "<group>";
@@ -475,15 +474,16 @@
 				E761761A41DA239C19E0561E /* PTTButton.swift */,
 				20DC16AC9B593F405AD8792D /* RadioView.swift */,
 				4389638E207A96A04375F3FE /* SettingsView.swift */,
+				115157ACFA217102D3427FA1 /* ShareSheet.swift */,
 				9FCDD23E0910B1E1363123B1 /* TerminalPrimitives.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
 		};
-		"TEMP_B1C750AA-777D-49AD-B6D2-89632A02C1F2" /* Klick */ = {
+		"TEMP_EDCD8835-D8C2-4F4A-8051-B449A26D11A7" /* Klick */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_0BFC16BF-9066-403D-B1B0-9F765A1F15A8" /* Signing.xcconfig */,
+				"TEMP_9F5F0B87-E36E-4832-9AC6-B78F2F71D223" /* Signing.xcconfig */,
 			);
 			path = Klick;
 			sourceTree = "<group>";
@@ -620,7 +620,6 @@
 				A05A2E936C5FFE6F4F4B7CE4 /* AudioToneDecoder.swift in Sources */,
 				79C421978620CE8DCB498AFA /* AudioTransport.swift in Sources */,
 				A9E49000C9AC0CAB44D7DE41 /* AudioUtils.swift in Sources */,
-				4F806BEFE86B0F33D3FF534B /* BroadcastInvite.swift in Sources */,
 				B97FBFB83B406ADD8F318BB8 /* CallManager.swift in Sources */,
 				A6123A54AF479B353572BE18 /* CameraControlPTT.swift in Sources */,
 				D87B1761959AFA4E168B7357 /* CameraPreviewView.swift in Sources */,
@@ -641,6 +640,7 @@
 				7A0DD34604C7D24F83484DB0 /* FlashlightDecoder.swift in Sources */,
 				B70B4DBC0FC9AF2DBB39DD32 /* FloatRingBuffer.swift in Sources */,
 				D8B66C73E4225CDF137343A9 /* InternetTransport.swift in Sources */,
+				F33D427D56644CB1AE012A9F /* InviteLink.swift in Sources */,
 				7D08752C03410EB6788C26F3 /* InviteReceivedView.swift in Sources */,
 				6FC2D74576B4AAE09BFFB9FC /* KeyStore.swift in Sources */,
 				5AE69F8E92DF73082AD7D9FE /* KlickActivityAttributes.swift in Sources */,
@@ -664,7 +664,6 @@
 				C1B6018807952368131BD1CF /* PacketProtocol.swift in Sources */,
 				3AEDEADD269DF0391B82E7BE /* PairingService.swift in Sources */,
 				9C3E9ED89A1F556C547C57E8 /* PairingView.swift in Sources */,
-				4B7EB5CF326C3D0DEFE9AEC6 /* PassphraseJoin.swift in Sources */,
 				A52F761F829C4F4E5323B2CE /* PeerDirectory.swift in Sources */,
 				3C4EF541B1E071EA7CF22F9A /* PeerInfo.swift in Sources */,
 				E5BCEA832EAFCA2EB4892109 /* PeerListView.swift in Sources */,
@@ -677,6 +676,7 @@
 				078FFF98FBBB0E87332D60EE /* Region.swift in Sources */,
 				196F95295F188EE2982BF504 /* RelayConfig.swift in Sources */,
 				77C7F8457A8F8CB9EFF90B59 /* SettingsView.swift in Sources */,
+				49259D60CD704B97ECA1F0C4 /* ShareSheet.swift in Sources */,
 				FD2F7605997C170C1BD39E41 /* TerminalPrimitives.swift in Sources */,
 				CB584DF57282F457AC2E0866 /* TogglePTTIntent.swift in Sources */,
 				8AE9FBCFBD50B69C11789E5F /* UDPTransport.swift in Sources */,
@@ -787,7 +787,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -842,7 +842,7 @@
 		};
 		6B01971E46A898944C3B7FEC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_0BFC16BF-9066-403D-B1B0-9F765A1F15A8" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_9F5F0B87-E36E-4832-9AC6-B78F2F71D223" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Resources/KlickKlick.entitlements;
@@ -880,7 +880,7 @@
 		};
 		AE0F2DE2B6837F30287A01D1 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_0BFC16BF-9066-403D-B1B0-9F765A1F15A8" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_9F5F0B87-E36E-4832-9AC6-B78F2F71D223" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Resources/KlickKlick.entitlements;
@@ -951,7 +951,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;

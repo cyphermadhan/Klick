@@ -27,9 +27,11 @@ final class AudioSessionManager: @unchecked Sendable {
     static let shared = AudioSessionManager()
     private let log = Logger(subsystem: "world.madhans.klick", category: "AudioSession")
     private var routeObserver: NSObjectProtocol?
+    private var interruptionObserver: NSObjectProtocol?
 
     private init() {
         installRouteObserver()
+        installInterruptionObserver()
     }
 
     func configureForPTT() throws {
@@ -73,6 +75,43 @@ final class AudioSessionManager: @unchecked Sendable {
             try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
         } catch {
             log.error("Speaker override failed: \(String(describing: error))")
+        }
+    }
+
+    /// Re-activate the audio session after an interruption ends (incoming
+    /// phone call, Siri, alarm). Without this, the AVAudioEngine stays
+    /// paused after the interrupting event releases focus — symptom: PTT
+    /// "works" but no sound plays until the user toggles LINK off/on.
+    private func installInterruptionObserver() {
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let self,
+                  let info = note.userInfo,
+                  let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+            switch type {
+            case .began:
+                self.log.info("Audio interruption began")
+            case .ended:
+                // Re-activate so subsequent playback resumes immediately.
+                // Caller (AudioPipeline) is responsible for re-starting
+                // its engines on the next start() — for already-running
+                // engines, AVAudioEngine resumes automatically once the
+                // session is active again.
+                do {
+                    try AVAudioSession.sharedInstance().setActive(true, options: [])
+                    self.applySpeakerOverride()
+                    self.log.info("Audio session re-activated after interruption")
+                } catch {
+                    self.log.error("Re-activate failed: \(String(describing: error))")
+                }
+            @unknown default:
+                break
+            }
         }
     }
 

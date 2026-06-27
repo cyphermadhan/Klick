@@ -4,8 +4,10 @@ import CryptoKit
 /// Configuration for the internet relay server.
 /// Not actor-isolated — these are simple UserDefaults reads safe from any context.
 enum RelayConfig: Sendable {
-    /// Default relay URL. Replace with your deployed Cloudflare Worker URL.
-    static let defaultURL = "wss://klick-relay.maddy-ax.workers.dev"
+    /// Default relay URL. The Cloudflare Worker is bound to this custom
+    /// domain, which also serves the AASA file + Universal Link fallback
+    /// page over HTTPS on the same hostname.
+    static let defaultURL = "wss://klick.arknet.click"
 
     private static let customURLKey = "klick.relay.url"
 

@@ -2,9 +2,14 @@ import SwiftUI
 
 /// Monospace list of discovered peers with multi-select. Each row renders as
 /// `[■] NAME........ [WIFI] RDY  ▪▪▪▪▫`. Tapping toggles selection.
+///
+/// The toggle is routed through an `onToggle` callback rather than a direct
+/// `Set` binding so the owner (PTTSession) can track manual deselects and
+/// prevent auto-select from re-adding a peer the user just removed.
 struct PeerListView: View {
     @ObservedObject var directory: PeerDirectory
-    @Binding var selectedPeers: Set<PeerInfo>
+    let selectedPeers: Set<PeerInfo>
+    let onToggle: (PeerInfo, Bool) -> Void
 
     var body: some View {
         Group {
@@ -15,7 +20,7 @@ struct PeerListView: View {
                     ForEach(directory.peers) { peer in
                         PeerRow(peer: peer,
                                 isSelected: selectedPeers.contains(peer),
-                                onTap: { toggleSelection(peer) })
+                                onTap: { onToggle(peer, !selectedPeers.contains(peer)) })
                         if peer.id != directory.peers.last?.id {
                             Rectangle()
                                 .fill(DT.border)
@@ -25,14 +30,6 @@ struct PeerListView: View {
                     }
                 }
             }
-        }
-    }
-
-    private func toggleSelection(_ peer: PeerInfo) {
-        if selectedPeers.contains(peer) {
-            selectedPeers.remove(peer)
-        } else {
-            selectedPeers.insert(peer)
         }
     }
 

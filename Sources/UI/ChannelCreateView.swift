@@ -1,12 +1,18 @@
 import SwiftUI
 import Sodium
 
-/// Sheet for creating a new channel or joining one by passphrase.
+/// Sheet for creating a new channel. Single-purpose: pick a name, generate
+/// a fresh 32-byte key, persist. The parent is expected to present
+/// `InviteSheet` for the new channel immediately after dismissal so the
+/// user lands directly on the share/invite step.
 struct ChannelCreateView: View {
     @ObservedObject var channelStore: ChannelStore
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
-    @State private var passphrase: String = ""
+
+    /// Called with the freshly-created channel right before dismissal so
+    /// the parent can immediately present an invite sheet for it.
+    var onCreated: ((Channel) -> Void)?
 
     var body: some View {
         ZStack {
@@ -27,7 +33,6 @@ struct ChannelCreateView: View {
                             .buttonStyle(.plain)
                     }
 
-                    // MARK: Create new channel
                     TerminalFrame("CREATE NEW") {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("CHANNEL NAME")
@@ -56,38 +61,9 @@ struct ChannelCreateView: View {
                             .buttonStyle(.plain)
                             .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                             .opacity(name.trimmingCharacters(in: .whitespaces).isEmpty ? 0.4 : 1)
-                        }
-                    }
-
-                    // MARK: Join by passphrase
-                    TerminalFrame("JOIN BY PASSPHRASE") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("SHARED PASSPHRASE")
-                                .walkieLabel(10)
-                                .foregroundStyle(DT.textDim)
-                            TextField("TYPE PASSPHRASE", text: $passphrase)
-                                .font(DT.mono(14, weight: .semibold))
-                                .foregroundStyle(DT.text)
-                                .autocorrectionDisabled()
-                                .textInputAutocapitalization(.never)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 8)
-                                .background(DT.panel)
-                                .overlay(Rectangle().strokeBorder(DT.border, lineWidth: 1))
-                            Text("EVERYONE WITH THE SAME PASSPHRASE JOINS THE SAME CHANNEL.")
+                            Text("YOU'LL GET AN INVITE SHEET TO SHARE THE CHANNEL NEXT.")
                                 .walkieCaption()
                                 .foregroundStyle(DT.textFaint)
-                            Button(action: joinByPassphrase) {
-                                Text("JOIN")
-                                    .walkieLabel(11, weight: .bold, tracking: 2)
-                                    .foregroundStyle(DT.bg)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 36)
-                                    .background(DT.info)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(passphrase.trimmingCharacters(in: .whitespaces).isEmpty)
-                            .opacity(passphrase.trimmingCharacters(in: .whitespaces).isEmpty ? 0.4 : 1)
                         }
                     }
                 }
@@ -108,13 +84,7 @@ struct ChannelCreateView: View {
         let key = sodium.secretBox.key()
         let channel = channelStore.create(name: trimmed, key: Data(key))
         channelStore.setActive(channel.id)
-        dismiss()
-    }
-
-    private func joinByPassphrase() {
-        let trimmed = passphrase.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        channelStore.joinByPassphrase(trimmed)
+        onCreated?(channel)
         dismiss()
     }
 }

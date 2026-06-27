@@ -58,6 +58,12 @@ final class PTTSession: ObservableObject {
     private static let textHistoryLimit = 50
     /// Per-channel chat history (keyed by channel ID).
     private var textHistoryByChannel: [String: [TextEntry]] = [:]
+    /// Per-channel peer selection (keyed by channel ID). Saved on channel
+    /// switch so returning to a channel restores the user's last targets.
+    private var selectedPeersByChannel: [String: Set<PeerInfo>] = [:]
+    /// Peer names the user has explicitly deselected this session, per channel.
+    /// Prevents auto-select from re-adding a peer the user just removed.
+    private var manuallyDeselectedByChannel: [String: Set<String>] = [:]
 
     /// Loss percentage clamped to a display-friendly 0…100.
     var lossPercent: Double {
@@ -549,7 +555,9 @@ final class PTTSession: ObservableObject {
         let kind = transport.kind
         transport.onPeersChanged = { [weak self] peers in
             Task { @MainActor in
-                self?.directory.update(peers, from: kind)
+                guard let self else { return }
+                self.directory.update(peers, from: kind)
+                self.autoSelectChannelMembers()
             }
         }
     }
@@ -579,8 +587,6 @@ final class PTTSession: ObservableObject {
             handleRelay(packet)
         case .emergency:
             break // Reserved for future use
-        case .broadcastInvite:
-            handleBroadcastInvite(packet)
         case .audio:
             guard let key = resolveKey(for: packet) else {
                 packetsDropped &+= 1
@@ -684,61 +690,6 @@ final class PTTSession: ObservableObject {
         #endif
     }
 
-    // MARK: - Broadcast Invite (Virus-like Spread)
-
-    /// Published list of broadcast invites received from nearby devices.
-    @Published private(set) var receivedBroadcasts: [(channelName: String, passphrase: String)] = []
-
-    /// Send a broadcast invite that spreads to all nearby devices.
-    /// Anyone who receives it and enters the passphrase joins the channel.
-    func sendBroadcastInvite(channelName: String, passphrase: String) {
-        let payload = BroadcastInviteCodec.encode(channelName: channelName, passphrase: passphrase, ttl: 3)
-        // Send to ALL peers on ALL transports (broadcast to everyone nearby).
-        for (_, transport) in transports {
-            for peer in directory.peers where peer.transport == transport.kind {
-                transport.sendText(.broadcastInvite, payload: payload, nonce: Packet.zeroNonce(), to: peer)
-            }
-        }
-        packetsSent &+= 1
-    }
-
-    private func handleBroadcastInvite(_ packet: Packet) {
-        // Broadcast invites are unencrypted — decode directly.
-        guard let (ttl, channelName, passphrase) = try? BroadcastInviteCodec.decode(packet.payload) else {
-            packetsDropped &+= 1
-            return
-        }
-
-        // Add to received broadcasts (UI shows these as joinable invites).
-        if !receivedBroadcasts.contains(where: { $0.channelName == channelName }) {
-            receivedBroadcasts.append((channelName: channelName, passphrase: passphrase))
-        }
-
-        // Forward to all nearby peers if relay is enabled and TTL > 0.
-        if MeshRelayStore.isEnabled, ttl > 0,
-           let forwarded = BroadcastInviteCodec.forward(packet.payload) {
-            for (_, transport) in transports {
-                for peer in directory.peers where peer.transport == transport.kind {
-                    transport.sendText(.broadcastInvite, payload: forwarded, nonce: Packet.zeroNonce(), to: peer)
-                }
-            }
-        }
-        packetsReceived &+= 1
-    }
-
-    /// Accept a received broadcast invite — join the channel using the passphrase.
-    func acceptBroadcastInvite(at index: Int) {
-        guard index < receivedBroadcasts.count else { return }
-        let invite = receivedBroadcasts[index]
-        if invite.passphrase.isEmpty {
-            // Open channel (no passphrase) — generate name-based channel
-            channelStore.joinByPassphrase(invite.channelName)
-        } else {
-            channelStore.joinByPassphrase(invite.passphrase)
-        }
-        receivedBroadcasts.remove(at: index)
-    }
-
     // MARK: - Channel Invites
 
     private func handleChannelInvite(_ packet: Packet) {
@@ -823,9 +774,10 @@ final class PTTSession: ObservableObject {
     func switchChannel(to channelId: String) {
         guard channelStore.channels.contains(where: { $0.id == channelId }) else { return }
 
-        // Save current text history
+        // Save current channel's text history + peer selection
         if let currentId = channelStore.activeChannelId {
             textHistoryByChannel[currentId] = textHistory
+            selectedPeersByChannel[currentId] = selectedPeers
         }
 
         channelStore.setActive(channelId)
@@ -833,23 +785,100 @@ final class PTTSession: ObservableObject {
         keyFingerprint = channelKey.map(PairingService.fingerprint(of:))
         isPaired = channelKey != nil
 
-        // Restore target channel's text history
+        // Restore target channel's text history + peer selection
         textHistory = textHistoryByChannel[channelId] ?? []
+        selectedPeers = selectedPeersByChannel[channelId] ?? []
 
-        // Reset peer selection — user re-selects for the new channel
-        selectedPeers.removeAll()
-
-        // Reconnect internet transport to the new channel's relay room.
-        if let oldInternet = transports[.internet] {
-            oldInternet.stop()
-            transports.removeValue(forKey: .internet)
+        // Kick MPC/UDP browsers to refresh — peers may have churned while
+        // the user was on another channel.
+        for transport in transports.values {
+            transport.refreshDiscovery()
         }
+
+        // Auto-select any newly-active channel members already in directory.
+        autoSelectChannelMembers()
+
+        // Tear down the old internet transport on a background queue —
+        // closing a WebSocket can take 1–3 s on a flaky connection and
+        // would otherwise freeze the channel-switch UI.
+        let oldInternet = transports[.internet]
+        transports.removeValue(forKey: .internet)
+        if let oldInternet {
+            DispatchQueue.global(qos: .userInitiated).async {
+                oldInternet.stop()
+            }
+        }
+
+        // Create the replacement synchronously — its `start()` just
+        // dispatches the WebSocket open onto its own private queue, so
+        // this returns immediately without blocking the main actor.
         if let key = channelKey {
             let internet = InternetTransport(channelKey: key)
             wireTransport(internet)
             try? internet.start(advertisingAs: DeviceName.current)
             transports[.internet] = internet
         }
+    }
+
+    // MARK: - Auto-select channel members
+
+    /// Auto-add any peer who is a member of the active channel into
+    /// `selectedPeers`. Skips peers the user has explicitly deselected
+    /// this session for this channel.
+    ///
+    /// Called whenever the directory updates (new peer discovered) and
+    /// after channel switches. Idempotent — no-op if everyone matchable
+    /// is already selected.
+    private func autoSelectChannelMembers() {
+        guard let channel = channelStore.activeChannel else { return }
+        let memberNames = Set(channel.members.map(\.name))
+        guard !memberNames.isEmpty else { return }
+        let deselected = manuallyDeselectedByChannel[channel.id] ?? []
+        for peer in directory.peers {
+            if memberNames.contains(peer.name),
+               !deselected.contains(peer.name),
+               !selectedPeers.contains(peer) {
+                selectedPeers.insert(peer)
+            }
+        }
+    }
+
+    /// Force a full transport restart. Used by Settings → RESET LINK to
+    /// recover from MPC half-open sessions or other stuck network state
+    /// without forcing the user to toggle LINK manually.
+    func resetLink() async {
+        guard isRunning else { return }
+        stop()
+        await start()
+    }
+
+    /// Lightweight transport-level resync. Kicks each transport's
+    /// `refreshDiscovery()` without tearing down sessions. Called by
+    /// ContentView when the app returns from background — MPC sessions
+    /// often go stale during the suspend, this is what surfaces them.
+    func refreshDiscovery() {
+        for transport in transports.values {
+            transport.refreshDiscovery()
+        }
+    }
+
+    /// Called by the UI when the user manually toggles a peer's selection.
+    /// Tracks the deselect so auto-select doesn't immediately re-add the
+    /// peer next time the directory updates.
+    func setSelected(_ peer: PeerInfo, selected: Bool) {
+        guard let channelId = channelStore.activeChannelId else {
+            if selected { selectedPeers.insert(peer) } else { selectedPeers.remove(peer) }
+            return
+        }
+        var deselected = manuallyDeselectedByChannel[channelId] ?? []
+        if selected {
+            selectedPeers.insert(peer)
+            deselected.remove(peer.name)
+        } else {
+            selectedPeers.remove(peer)
+            deselected.insert(peer.name)
+        }
+        manuallyDeselectedByChannel[channelId] = deselected
     }
 }
 

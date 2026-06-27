@@ -44,11 +44,6 @@ enum PacketType: UInt8, Sendable {
     /// at maximum volume. Payload: [senderNameLen: 1][senderName: N][encrypted audio]
     /// Rate-limited to 1 per 60 seconds per sender.
     case emergency = 0x0B
-    /// Broadcast invite — spreads to all nearby devices (even unpaired).
-    /// Payload is UNENCRYPTED: [TTL:1][channelNameLen:1][channelName:N][passphraseLen:1][passphrase:N]
-    /// (or passphrase can be empty for open/no-password channels).
-    /// Forwarded by any device with mesh relay enabled.
-    case broadcastInvite = 0x0C
 }
 
 struct Packet: Sendable, Equatable {

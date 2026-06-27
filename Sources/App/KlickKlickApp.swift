@@ -11,17 +11,32 @@ struct KlickKlickApp: App {
                 .onOpenURL { url in
                     handleIncomingURL(url)
                 }
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                    // Universal Links arrive here when the app is launched
+                    // from a browser/Messages tap on https://klick.arknet.click/join...
+                    if let url = activity.webpageURL {
+                        handleIncomingURL(url)
+                    }
+                }
         }
     }
 
-    /// Handle klick:// deep links for channel invites.
+    /// Handle channel invite deep links. Accepts two forms:
+    ///   • `klick://join?payload=...` — custom URL scheme (legacy / QR codes).
+    ///   • `https://klick.arknet.click/join?payload=...` — Universal Link.
+    /// Both carry the same base64url-encoded payload and dispatch to the
+    /// same notification, so downstream join logic doesn't fork.
     private func handleIncomingURL(_ url: URL) {
-        guard url.scheme == "klick", url.host == "join" else { return }
+        let isCustomScheme = url.scheme == "klick" && url.host == "join"
+        let isUniversalLink = (url.scheme == "https" || url.scheme == "http")
+            && url.host == "klick.arknet.click"
+            && url.path == "/join"
+        guard isCustomScheme || isUniversalLink else { return }
+
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let payloadItem = components.queryItems?.first(where: { $0.name == "payload" }),
               let payload = payloadItem.value else { return }
 
-        // Post notification — ContentView's PTTSession will pick it up and join the channel.
         NotificationCenter.default.post(
             name: .didReceiveChannelInviteLink,
             object: payload

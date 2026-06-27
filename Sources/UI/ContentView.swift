@@ -25,6 +25,13 @@ struct ContentView: View {
     @State private var showingPeers = false
     @State private var showingChannelCreate = false
     @State private var showingChannelMembers = false
+    /// Set in `ChannelCreateView.onCreated` (before its dismiss fires)
+    /// and consumed by the create sheet's `onDismiss` to chain into the
+    /// invite sheet. Two flags rather than one because SwiftUI can't
+    /// present two sheets simultaneously — the first must be fully gone
+    /// before the second begins.
+    @State private var pendingInviteAfterCreate = false
+    @State private var showingInvitePeerAfterCreate = false
     /// Buffer for characters streamed from ListenView. Committed to the
     /// session's RX scroll as one entry when the listen sheet closes.
     @State private var decodedListenBuffer = ""
@@ -63,8 +70,13 @@ struct ContentView: View {
             }
             .toolbar(.hidden)
             .navigationDestination(isPresented: $showingSettings) {
-                SettingsView(radio: session.radio,
-                             meshLink: session.meshLink as? CoreBluetoothMeshtasticLink)
+                SettingsView(
+                    radio: session.radio,
+                    meshLink: session.meshLink as? CoreBluetoothMeshtasticLink,
+                    onResetLink: {
+                        Task { await session.resetLink() }
+                    }
+                )
             }
         }
         .preferredColorScheme(.dark)
@@ -93,8 +105,28 @@ struct ContentView: View {
                     }
                 }
         }
-        .sheet(isPresented: $showingChannelCreate) {
-            ChannelCreateView(channelStore: session.channelStore)
+        .sheet(isPresented: $showingChannelCreate, onDismiss: {
+            // If the create flow produced a channel, present the invite
+            // sheet next so the user lands directly on share/invite.
+            // Wait for the dismiss animation to finish before flipping
+            // the second sheet's binding — SwiftUI drops sheets that
+            // open while another is still tearing down.
+            if pendingInviteAfterCreate {
+                pendingInviteAfterCreate = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    showingInvitePeerAfterCreate = true
+                }
+            }
+        }) {
+            ChannelCreateView(
+                channelStore: session.channelStore,
+                onCreated: { _ in
+                    pendingInviteAfterCreate = true
+                }
+            )
+        }
+        .sheet(isPresented: $showingInvitePeerAfterCreate) {
+            InvitePeerSheet(session: session)
         }
         .sheet(isPresented: $showingChannelMembers) {
             ChannelMembersView(session: session)
@@ -381,6 +413,14 @@ struct ContentView: View {
                     await session.start()
                     isReconnecting = false
                 }
+            } else if session.isRunning {
+                // Session survived background — but MPC peers may have
+                // gone stale (iOS suspends MultipeerConnectivity sessions
+                // even when our process keeps running for audio). Kick
+                // discovery so any peers that came online during the
+                // background window surface immediately instead of
+                // waiting for the next opportunistic refresh.
+                session.refreshDiscovery()
             }
         case .inactive:
             // Transient (notifications, multitasking switcher); ignore —
@@ -459,14 +499,18 @@ struct PeerListSheet: View {
                 }
                 HStack(spacing: 10) {
                     Button("ALL") {
-                        session.selectedPeers = Set(session.directory.peers)
+                        for peer in session.directory.peers {
+                            session.setSelected(peer, selected: true)
+                        }
                     }
                     .font(DT.mono(10, weight: .bold))
                     .tracking(DT.labelTracking)
                     .foregroundStyle(DT.textDim)
                     .buttonStyle(.plain)
                     Button("NONE") {
-                        session.selectedPeers.removeAll()
+                        for peer in session.directory.peers {
+                            session.setSelected(peer, selected: false)
+                        }
                     }
                     .font(DT.mono(10, weight: .bold))
                     .tracking(DT.labelTracking)
@@ -478,8 +522,13 @@ struct PeerListSheet: View {
                         .foregroundStyle(DT.textDim)
                 }
                 TerminalFrame("DISCOVERED") {
-                    PeerListView(directory: session.directory,
-                                 selectedPeers: $session.selectedPeers)
+                    PeerListView(
+                        directory: session.directory,
+                        selectedPeers: session.selectedPeers,
+                        onToggle: { peer, selected in
+                            session.setSelected(peer, selected: selected)
+                        }
+                    )
                 }
                 .frame(maxHeight: .infinity)
             }

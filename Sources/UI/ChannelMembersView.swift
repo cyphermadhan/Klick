@@ -154,14 +154,19 @@ struct InvitePeerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingShareSheet = false
 
-    private var inviteLink: String? {
+    /// Universal Link for the active channel. Sharing this `URL` (not a
+    /// `String`) is what lets Messages / Mail render the rich preview and
+    /// makes the link tappable. Falls back to nil if there's no active
+    /// channel or no key — both unrecoverable here so the share button
+    /// just won't fire.
+    private var inviteURL: URL? {
         guard let channel = session.channelStore.activeChannel,
               let key = session.channelStore.key(for: channel.id) else { return nil }
-        let pairing = PairingService()
-        let payload = pairing.channelQRPayload(channelId: channel.id, channelKey: key, channelName: channel.name)
-        // URL-encode the payload so it's a tappable link that opens the app
-        let encoded = payload.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? payload
-        return "klick://join?payload=\(encoded)"
+        return InviteLink.makeURL(
+            channelId: channel.id,
+            channelKey: key,
+            channelName: channel.name
+        )
     }
 
     var body: some View {
@@ -242,10 +247,11 @@ struct InvitePeerSheet: View {
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showingShareSheet) {
-            if let link = inviteLink {
-                ShareSheet(items: [
-                    "Join my Klick channel: \(link)"
-                ])
+            if let url = inviteURL {
+                // Pass the URL itself rather than a wrapped string so
+                // Messages renders the link as a rich tappable preview
+                // and other share targets pick up the right metadata.
+                ShareSheet(items: [url])
             }
         }
     }
@@ -261,13 +267,4 @@ struct InvitePeerSheet: View {
     }
 }
 
-/// UIKit share sheet wrapped for SwiftUI.
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
+// ShareSheet moved to its own file at Sources/UI/ShareSheet.swift

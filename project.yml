@@ -16,7 +16,7 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: minimal
     MARKETING_VERSION: "0.5.0"
-    CURRENT_PROJECT_VERSION: "7"
+    CURRENT_PROJECT_VERSION: "8"
     IPHONEOS_DEPLOYMENT_TARGET: "16.0"
     TARGETED_DEVICE_FAMILY: "1"
     ENABLE_PREVIEWS: "YES"
@@ -134,6 +134,13 @@ targets:
         aps-environment: development
         com.apple.security.application-groups:
           - group.world.madhans.klick
+        # Universal Links — taps on https://klick.arknet.click/join?payload=...
+        # open the app directly when installed, and route to the deep-link
+        # handler in KlickKlickApp via .onContinueUserActivity / .onOpenURL.
+        # The Cloudflare Worker bound to this domain serves the AASA file
+        # at /.well-known/apple-app-site-association.
+        com.apple.developer.associated-domains:
+          - applinks:klick.arknet.click
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: world.madhans.klick

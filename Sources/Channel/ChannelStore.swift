@@ -87,34 +87,6 @@ final class ChannelStore: ObservableObject {
         save()
     }
 
-    /// Join or create a channel from a passphrase. If a channel with the
-    /// derived ID already exists locally, just switch to it. Otherwise
-    /// create it with the derived key.
-    @discardableResult
-    func joinByPassphrase(_ passphrase: String) -> Channel {
-        let channelId = PassphraseJoin.deriveChannelId(from: passphrase)
-        // Already have this channel?
-        if let existing = channels.first(where: { $0.id == channelId }) {
-            setActive(existing.id)
-            return existing
-        }
-        let key = PassphraseJoin.deriveKey(from: passphrase)
-        let name = PassphraseJoin.deriveChannelName(from: passphrase)
-        let member = ChannelMember(name: DeviceName.current, addedAt: .now)
-        let channel = Channel(
-            id: channelId,
-            name: name,
-            members: [member],
-            createdAt: .now,
-            creatorName: nil  // Open channel — no single creator
-        )
-        try? KeyStore(forChannel: channel.id).save(key)
-        channels.append(channel)
-        activeChannelId = channel.id
-        save()
-        return channel
-    }
-
     func setActive(_ channelId: String) {
         guard channels.contains(where: { $0.id == channelId }) else { return }
         activeChannelId = channelId

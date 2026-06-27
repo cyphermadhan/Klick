@@ -59,6 +59,12 @@ protocol AudioTransport: AnyObject {
     /// from others' peer scans but can still browse and send.
     func setAdvertising(_ enabled: Bool)
 
+    /// Re-kick peer discovery without tearing down sessions. MPC stop+starts
+    /// its browser; UDP / Bonjour browsers are already sticky so the default
+    /// is a no-op. Called when peer state may have gone stale (e.g. after
+    /// a channel switch).
+    func refreshDiscovery()
+
     /// Send one encrypted audio frame to a specific peer. The transport is
     /// responsible for locating the right endpoint from `peer.id`. If the
     /// peer is not currently reachable, the packet is dropped silently
@@ -86,4 +92,10 @@ protocol AudioTransport: AnyObject {
     /// carries the full current list (not a diff) to keep merging simple
     /// in `PeerDirectory`.
     var onPeersChanged: (@Sendable ([PeerInfo]) -> Void)? { get set }
+}
+
+extension AudioTransport {
+    /// Default no-op so transports without a meaningful discovery refresh
+    /// (UDP, internet, LoRa) don't need a stub each.
+    func refreshDiscovery() {}
 }
