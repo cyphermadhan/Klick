@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Klick</title>
+<meta name="description" content="Klick's privacy policy: no accounts, no servers, no analytics. What little data exists is generated and stored on your device only.">
+<link rel="icon" href="assets/icon.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="wrap">
+    <a class="brand" href="index.html" style="color:inherit;text-decoration:none;">KLICK<span>.</span></a>
+    <nav>
+      <a href="index.html#why">Why</a>
+      <a href="index.html#features">Features</a>
+      <a href="index.html#how-to-use">How to use</a>
+      <a href="index.html#privacy">Privacy</a>
+    </nav>
+    <a class="btn btn-ghost" href="https://github.com/cyphermadhan/Klick" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</header>
+
+<section class="legal">
+  <div class="wrap">
+    <span class="updated">Last updated · August 2026</span>
+    <h1>Privacy Policy</h1>
+
+    <div class="legal-body">
+
+      <h2>The short version</h2>
+      <p>Klick doesn't have a server, so there's nothing of yours for us to collect, store, or sell. There is no account, no sign-up, and no analytics SDK in the app. Everything the app needs — your device name, your encryption keys, your channels and peers — is generated on your iPhone and stays on your iPhone.</p>
+
+      <h2>Data we collect</h2>
+      <p>Klick's developer collects none of your data. The app has no backend, no database, and no analytics or crash-reporting service embedded in it. We never see your messages, your voice, your contacts, or your location.</p>
+      <ul>
+        <li><b>No account or identity.</b> There's no sign-up, login, phone number, or email required to use Klick.</li>
+        <li><b>No servers.</b> Klick talks directly, device-to-device, over WiFi or Bluetooth — nothing is routed through infrastructure we operate.</li>
+        <li><b>No analytics or tracking.</b> There is no third-party SDK collecting usage data, advertising identifiers, or behavioral analytics.</li>
+        <li><b>No advertising.</b> Klick shows no ads and shares no data with ad networks.</li>
+      </ul>
+
+      <h2>Data generated and stored on your device</h2>
+      <p>To function, Klick creates and stores the following, entirely on your device, using the iOS Keychain and local app storage:</p>
+      <ul>
+        <li><b>Encryption keys</b> — generated on-device when you pair with someone or create a channel. Keys are 32-byte libsodium keys and never leave your device unencrypted.</li>
+        <li><b>Device name</b> — a label you choose, shown to peers you connect with. It's not tied to any real-world identity unless you make it one.</li>
+        <li><b>Channels and peer list</b> — the names and keys of channels you've created or joined, and the peers you've paired with.</li>
+        <li><b>Chat history</b> — text and Morse messages you've sent or received, kept locally in the app.</li>
+      </ul>
+      <p>None of the above is transmitted to us or to any third party. Uninstalling the app, or using the unpair/reset options in Settings, removes it from your device.</p>
+
+      <h2>Permissions Klick requests, and why</h2>
+      <p>iOS will prompt you for the following permissions. Each is used only for the feature named — none of them enable any data collection by us.</p>
+      <ul>
+        <li><b>Bluetooth</b> — to discover nearby phones when WiFi isn't available, and to pair with an optional Meshtastic LoRa radio for long-range text.</li>
+        <li><b>Local network</b> — to discover and communicate with nearby Klick devices over WiFi.</li>
+        <li><b>Microphone</b> — for push-to-talk voice transmission, and for decoding Morse code picked up from another device's speaker.</li>
+        <li><b>Camera</b> — to scan pairing/invite QR codes, and to decode Morse code flashed from another phone's torch.</li>
+      </ul>
+
+      <h2>What Apple sees</h2>
+      <p>If you install Klick through TestFlight or the App Store, Apple collects standard distribution and crash diagnostics as part of operating those platforms. That data is governed by <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">Apple's privacy policy</a>, not this one — we don't have access to it beyond what App Store Connect surfaces to any developer.</p>
+
+      <h2>Third-party sharing</h2>
+      <p>We don't share, sell, or rent any data, because we don't collect any in the first place. Klick has no third-party integrations that transmit your information off your device.</p>
+
+      <h2>Children's privacy</h2>
+      <p>Klick is not directed at children and doesn't knowingly collect information from anyone, regardless of age — there's no account system to collect information through.</p>
+
+      <h2>Changes to this policy</h2>
+      <p>If Klick's data practices ever change — for example, if a future version adds an optional server-backed feature — this page will be updated first, and the "last updated" date above will reflect it.</p>
+
+      <h2>Contact</h2>
+      <p>Klick doesn't have a support inbox yet. Questions or concerns can be filed as an issue on <a href="https://github.com/cyphermadhan/Klick/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fine">KLICK · v0.5.0 · BUILD 8 · in active development, not yet on the App Store</div>
+    <div class="links">
+      <a href="index.html">Home</a>
+      <a href="https://github.com/cyphermadhan/Klick" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/cyphermadhan/Klick/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      <a href="privacy.html">Privacy Policy</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

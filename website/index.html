@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klick — Encrypted push-to-talk. No servers. No accounts.</title>
+<meta name="description" content="Klick is an encrypted push-to-talk walkie-talkie for iOS. Local WiFi + Bluetooth mesh, channels, Morse, and an optional LoRa radio bridge for off-grid range — with no servers and no accounts.">
+<link rel="icon" href="assets/icon.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topnav">
+  <div class="wrap">
+    <div class="brand">KLICK<span>.</span></div>
+    <nav>
+      <a href="#why">Why</a>
+      <a href="#features">Features</a>
+      <a href="#how-to-use">How to use</a>
+      <a href="#privacy">Privacy</a>
+    </nav>
+    <a class="btn btn-ghost" href="https://github.com/cyphermadhan/Klick" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-copy">
+      <div class="hero-kicker"><span class="pixel-dot"></span>In active development · TestFlight</div>
+      <h1>Push-to-talk,<br><em>fully encrypted.</em><br>No servers. No accounts.</h1>
+      <p class="lede">Klick turns two or more iPhones into an encrypted walkie-talkie. It finds peers over WiFi and Bluetooth, encrypts every packet end-to-end, and never touches a server — talk, text, or send Morse, even with no internet at all.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="https://github.com/cyphermadhan/Klick" target="_blank" rel="noopener">View on GitHub</a>
+        <a class="btn btn-ghost" href="#how-to-use">See how it works ↓</a>
+      </div>
+      <div class="hero-specs">
+        <div><b>0.5.0 · BUILD 8</b>opus 48k · xsalsa20-poly1305</div>
+        <div><b>WIFI + BLUETOOTH</b>zero-config peer discovery</div>
+        <div><b>iOS 16+</b>iPhone, SwiftUI</div>
+      </div>
+    </div>
+    <div class="hero-shot">
+      <div class="phone-frame">
+        <img src="assets/screenshots/01-talk.png" alt="Klick main TALK screen showing LINK, PAIR and PEER tiles above the push-to-talk button" loading="eager">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">Why Klick</span>
+      <h2>No infrastructure to trust.</h2>
+      <p>Most comms apps route your voice through someone's cloud. Klick doesn't have one — every feature is designed to work between two phones and nothing else.</p>
+    </div>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="glyph">■</div>
+        <h3>No servers, no accounts</h3>
+        <p>There's nothing to sign up for and nothing to sign in to. Devices talk directly to each other.</p>
+      </div>
+      <div class="why-card">
+        <div class="glyph">■</div>
+        <h3>End-to-end encrypted</h3>
+        <p>Every packet — voice, text, or Morse — is sealed with libsodium (XSalsa20 + Poly1305) before it leaves the device.</p>
+      </div>
+      <div class="why-card">
+        <div class="glyph">■</div>
+        <h3>Works fully offline</h3>
+        <p>WiFi and Bluetooth discovery need a shared network or just proximity — no cell signal, no internet required.</p>
+      </div>
+      <div class="why-card">
+        <div class="glyph">■</div>
+        <h3>Off-grid range, optional</h3>
+        <p>Pair a Meshtastic LoRa radio to carry encrypted text far past WiFi/Bluetooth range, with region-aware duty-cycle limits built in.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">Features</span>
+      <h2>One app, several ways to reach someone.</h2>
+      <p>Everything below runs on the same encrypted transport layer — pick the mode that fits the situation.</p>
+    </div>
+    <div class="feat-grid">
+
+      <div class="feat-card" style="--accent: var(--nav-talk)">
+        <span class="tag">Talk</span>
+        <h3>Push-to-talk mesh</h3>
+        <p>Hold the TRANSMIT button to send live Opus-encoded voice to selected peers over WiFi (UDP + Bonjour) or Bluetooth (MultipeerConnectivity) — whichever's in range.</p>
+      </div>
+
+      <div class="feat-card" style="--accent: var(--sys)">
+        <span class="tag">Channels</span>
+        <h3>Named group channels</h3>
+        <p>Create channels for a crew or an event. Each one gets its own encryption key, so members never share a key with anyone outside the channel.</p>
+      </div>
+
+      <div class="feat-card" style="--accent: var(--nav-chat)">
+        <span class="tag">Chat</span>
+        <h3>Encrypted text</h3>
+        <p>Prefer typing? Send text over the same encrypted link, with preset phrases (SOS, HELP, OK…) for one-tap sending.</p>
+      </div>
+
+      <div class="feat-card" style="--accent: var(--nav-listen)">
+        <span class="tag">Morse</span>
+        <h3>Morse send + decode</h3>
+        <p>Send any message as Morse — beeped through the speaker or flashed through the torch — and decode incoming Morse via the camera or the mic.</p>
+      </div>
+
+      <div class="feat-card" style="--accent: var(--warn)">
+        <span class="tag">Radio</span>
+        <h3>LoRa / Meshtastic bridge</h3>
+        <p>Pair a Meshtastic radio over Bluetooth to carry text far beyond WiFi/Bluetooth range, with a region picker and an ETSI-style duty-cycle ledger to stay compliant.</p>
+      </div>
+
+      <div class="feat-card" style="--accent: var(--info)">
+        <span class="tag">Relay</span>
+        <h3>Phone mesh relay</h3>
+        <p>Out of direct range? Other Klick phones nearby can flood-relay your packet up to 3 hops, with dedup so it doesn't loop forever.</p>
+      </div>
+
+      <div class="feat-card" style="--accent: var(--ok)">
+        <span class="tag">CallKit</span>
+        <h3>Rings like a real call</h3>
+        <p>An incoming transmission while the app is backgrounded surfaces as a system call — it rings, shows on the lock screen, and bypasses Do Not Disturb.</p>
+      </div>
+
+      <div class="feat-card" style="--accent: var(--tx)">
+        <span class="tag">Invites</span>
+        <h3>One-tap channel invites</h3>
+        <p>Invite someone by QR code, over-the-wire to a nearby peer, or with a universal link — tapping it opens Klick straight into the channel.</p>
+      </div>
+
+      <div class="feat-card" style="--accent: var(--nav-settings)">
+        <span class="tag">Privacy</span>
+        <h3>Discoverability toggle</h3>
+        <p>Go invisible on the mesh whenever you want — you can still browse and reach peers you already know, without advertising your presence.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="how-to-use">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">How to use it</span>
+      <h2>From install to first transmission.</h2>
+      <p>Real screens from the current build, in the order you'd actually tap through them.</p>
+    </div>
+
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-shot">
+          <div class="phone-frame">
+            <img src="assets/screenshots/01-talk.png" alt="Main TALK screen with LINK, PAIR, PEER tiles and the transmit button">
+          </div>
+        </div>
+        <div class="step-text">
+          <div class="step-num"><b>01</b>Go live</div>
+          <h3>Open Klick and tap LINK</h3>
+          <p>The main screen is the whole app: LINK starts your radios (WiFi + Bluetooth), PAIR sets up encryption with another device, and PEER is who you're talking to. TX/RX telemetry and the hold-to-talk button sit below.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-shot">
+          <div class="phone-frame">
+            <img src="assets/screenshots/02-pairing.png" alt="Pairing screen showing a QR code to exchange the encryption key">
+          </div>
+        </div>
+        <div class="step-text">
+          <div class="step-num"><b>02</b>Pair a device</div>
+          <h3>Tap PAIR, show or scan a code</h3>
+          <p>Pairing exchanges a 32-byte key over a QR code — one device shows it, the other scans it. The key is stored in the Keychain and never leaves either device unencrypted.</p>
+          <p class="note">Legacy pairwise keys still work; channels (below) use their own per-channel key instead.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-shot">
+          <div class="phone-frame">
+            <img src="assets/screenshots/06-peers.png" alt="Peer list screen with select-all and select-none controls">
+          </div>
+        </div>
+        <div class="step-text">
+          <div class="step-num"><b>03</b>Pick who to reach</div>
+          <h3>Select peers from the PEER tile</h3>
+          <p>Discovered devices show up here automatically once LINK is on. Multi-select who your next transmission or message goes to — ALL, NONE, or pick individually.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-shot">
+          <div class="phone-frame">
+            <img src="assets/screenshots/07-channel-create.png" alt="Channel creation screen with a name field">
+          </div>
+        </div>
+        <div class="step-text">
+          <div class="step-num"><b>04</b>Or create a channel</div>
+          <h3>Group multiple peers under one name</h3>
+          <p>Channels get their own encryption key and a member list, so you can run one persistent group (a crew, a trip, an event) instead of re-selecting peers every time. Invite members by QR, over-the-wire, or a shareable link.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-shot">
+          <div class="phone-frame">
+            <img src="assets/screenshots/03-chat.png" alt="Chat screen with a text composer, preset phrase chips and a Morse send toggle">
+          </div>
+        </div>
+        <div class="step-text">
+          <div class="step-num"><b>05</b>Type instead of talk</div>
+          <h3>Chat, with an optional Morse send</h3>
+          <p>Preset chips (SOS, HELP, OK…) drop straight into the composer. Flip "SEND AS MORSE" and the same message goes out as tone/flashlight pulses instead of a silent text packet.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-shot">
+          <div class="phone-frame">
+            <img src="assets/screenshots/04-listen.png" alt="Listen screen offering camera or audio Morse decoding">
+          </div>
+        </div>
+        <div class="step-text">
+          <div class="step-num"><b>06</b>Listen for Morse</div>
+          <h3>Decode via camera or mic</h3>
+          <p>Point the back camera at another phone's flashlight, or hold the mic near its speaker — either way, decoded characters land straight in your chat history.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-shot">
+          <div class="phone-frame">
+            <img src="assets/screenshots/05-settings.png" alt="Settings screen with device name, discoverability and mesh relay toggles">
+          </div>
+        </div>
+        <div class="step-text">
+          <div class="step-num"><b>07</b>Tune it to your setup</div>
+          <h3>Settings: region, discoverability, mesh relay</h3>
+          <p>Set your region for LoRa duty-cycle rules, toggle whether you're discoverable on the mesh, turn phone-to-phone relay on or off, and unpair a device if you need to start clean.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="privacy">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-tag">Privacy &amp; security</span>
+      <h2>What "no servers" actually means.</h2>
+    </div>
+    <div class="privacy-grid">
+      <ul class="privacy-list">
+        <li><span class="ok-dot">■</span><span><b>No account, no phone number, no email.</b> Klick doesn't ask for an identity — devices recognize each other by the keys they've exchanged.</span></li>
+        <li><span class="ok-dot">■</span><span><b>Keys are generated on-device</b> and stored in the iOS Keychain. Pairing/invite flows move a key over a QR code or an already-encrypted channel, never in plaintext over the network.</span></li>
+        <li><span class="ok-dot">■</span><span><b>Every channel has its own key.</b> Losing or leaving one channel doesn't expose any other channel's traffic.</span></li>
+        <li><span class="ok-dot">■</span><span><b>Trial decryption, not a lookup.</b> An incoming packet is tried against your active channel's key first, then each other known key — there's no central directory mapping packets to identities.</span></li>
+        <li><span class="ok-dot">■</span><span><b>Voice, text, and Morse all use the same seal.</b> libsodium's <code>crypto_secretbox</code> (XSalsa20 + Poly1305) authenticates and encrypts every packet before it's sent.</span></li>
+      </ul>
+      <div class="terminal-block">$ <span class="c-info">klick --describe-transport</span>
+<span class="c-dim">WIFI ..... UDP + Bonjour, local network only</span>
+<span class="c-dim">NEAR ..... MultipeerConnectivity (Bluetooth/AWDL)</span>
+<span class="c-dim">MESH ..... Meshtastic LoRa bridge, opt-in hardware</span>
+<span class="c-dim">RELAY .... phone-to-phone flood relay, TTL 3, opt-in</span>
+
+CIPHER ... XSalsa20-Poly1305 (libsodium secretbox)
+KEY ...... 32 bytes, per-channel, Keychain-stored
+SERVERS .. <span class="c-warn">none</span>
+ACCOUNTS . <span class="c-warn">none</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fine">KLICK · v0.5.0 · BUILD 8 · in active development, not yet on the App Store</div>
+    <div class="links">
+      <a href="https://github.com/cyphermadhan/Klick" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/cyphermadhan/Klick/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      <a href="https://github.com/cyphermadhan/Klick/blob/main/NOTES.md" target="_blank" rel="noopener">Build notes</a>
+      <a href="privacy.html">Privacy Policy</a>
+    </div>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox">
+  <div class="close-hint">TAP TO CLOSE</div>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
