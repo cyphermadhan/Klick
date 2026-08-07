@@ -18,6 +18,11 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var session = PTTSession()
     @Environment(\.scenePhase) private var scenePhase
+    /// Flips true the first time onboarding is dismissed (SKIP or GET
+    /// STARTED) — not when it's shown, so killing the app mid-walkthrough
+    /// shows it again next launch instead of silently marking it "seen".
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @State private var showingOnboarding = false
     @State private var showingPairing = false
     @State private var showingSettings = false
     @State private var showingChat = false
@@ -80,6 +85,15 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .onAppear {
+            if !hasSeenOnboarding { showingOnboarding = true }
+        }
+        .fullScreenCover(isPresented: $showingOnboarding) {
+            OnboardingView {
+                hasSeenOnboarding = true
+                showingOnboarding = false
+            }
+        }
         .onReceive(levelTick) { _ in session.tickLevels() }
         .onChange(of: scenePhase) { newPhase in handleScenePhase(newPhase) }
         .sheet(isPresented: $showingChat) {
@@ -137,9 +151,10 @@ struct ContentView: View {
 
     private var brandStrip: some View {
         HStack(spacing: 8) {
-            Text("KLICK")
-                .walkieLabel(14, weight: .heavy, tracking: 3)
-                .foregroundStyle(DT.text)
+            (
+                Text("KLICK").walkieLabel(14, weight: .heavy, tracking: 3).foregroundColor(DT.text)
+                + Text(".").walkieLabel(14, weight: .heavy, tracking: 3).foregroundColor(DT.tx)
+            )
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             Rectangle().fill(DT.border).frame(width: 1, height: 12)
@@ -172,6 +187,13 @@ struct ContentView: View {
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             Spacer(minLength: 0)
+            Button { showingOnboarding = true } label: {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(DT.textDim)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Help")
         }
     }
 

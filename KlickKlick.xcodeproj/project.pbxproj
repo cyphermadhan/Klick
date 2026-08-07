@@ -101,6 +101,7 @@
 		FB3F33F64A7C2463B1E01084 /* AudioPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03AEC384CDC96C142A1CE1E1 /* AudioPipeline.swift */; };
 		FD2F7605997C170C1BD39E41 /* TerminalPrimitives.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FCDD23E0910B1E1363123B1 /* TerminalPrimitives.swift */; };
 		FD8021736AEF4FCBFDE57286 /* CoreBluetoothMeshtasticLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2961E89FBC1BBA61DF7AF218 /* CoreBluetoothMeshtasticLink.swift */; };
+		71C5E80B05AF4CF7A5C1DB81 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44DF2572825046A28C160055 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -191,6 +192,7 @@
 		9AE78F4281629613C6957486 /* DiscoverabilityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverabilityStore.swift; sourceTree = "<group>"; };
 		9AF4F867D9A834BADA41E536 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
 		9FCDD23E0910B1E1363123B1 /* TerminalPrimitives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalPrimitives.swift; sourceTree = "<group>"; };
+		44DF2572825046A28C160055 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A0F26B84FE9BC641F6F8485B /* FlashlightBeacon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashlightBeacon.swift; sourceTree = "<group>"; };
 		A35A4C58F38597FB9153BF2B /* PairingServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingServiceTests.swift; sourceTree = "<group>"; };
 		A5251EB79008644978987A7B /* MorseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorseTests.swift; sourceTree = "<group>"; };
@@ -229,7 +231,7 @@
 		F4CD2AC8A254FE0BE69421F6 /* ProtobufWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtobufWire.swift; sourceTree = "<group>"; };
 		F521D6883EE02FDF28184E81 /* InviteLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteLink.swift; sourceTree = "<group>"; };
 		FEC80F6C6E752051169D6A33 /* AudioPlayback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayback.swift; sourceTree = "<group>"; };
-		"TEMP_9F5F0B87-E36E-4832-9AC6-B78F2F71D223" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		"TEMP_D668B24C-C272-4964-B5D0-B63681ED7C38" /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -470,6 +472,7 @@
 				AAA768B05DEB44570EC9E8EE /* DesignTokens.swift */,
 				A67B8F7A5E34DBC793671328 /* InviteReceivedView.swift */,
 				ABB96C31AC746959E99FB63C /* ListenView.swift */,
+				44DF2572825046A28C160055 /* OnboardingView.swift */,
 				78CE62140BCFC1094E48E491 /* PeerListView.swift */,
 				E761761A41DA239C19E0561E /* PTTButton.swift */,
 				20DC16AC9B593F405AD8792D /* RadioView.swift */,
@@ -480,10 +483,10 @@
 			path = UI;
 			sourceTree = "<group>";
 		};
-		"TEMP_EDCD8835-D8C2-4F4A-8051-B449A26D11A7" /* Klick */ = {
+		"TEMP_68A9973B-582D-42A3-B1C3-45D683466B8D" /* Klick */ = {
 			isa = PBXGroup;
 			children = (
-				"TEMP_9F5F0B87-E36E-4832-9AC6-B78F2F71D223" /* Signing.xcconfig */,
+				"TEMP_D668B24C-C272-4964-B5D0-B63681ED7C38" /* Signing.xcconfig */,
 			);
 			path = Klick;
 			sourceTree = "<group>";
@@ -658,6 +661,7 @@
 				014CCD60E6BFC73D4D125180 /* MorseDemodulator.swift in Sources */,
 				72AF8908C94496C28C84B023 /* MorseSpeed.swift in Sources */,
 				9E527965EA6C4B0D14856EEF /* MorseTone.swift in Sources */,
+				71C5E80B05AF4CF7A5C1DB81 /* OnboardingView.swift in Sources */,
 				F40DF069CE1D0C1C7F1BBE51 /* OpusCodec.swift in Sources */,
 				257BDD89914163033540776A /* PTTButton.swift in Sources */,
 				4E9BC198D1FFBEB5AD3ACF57 /* PTTSession.swift in Sources */,
@@ -842,7 +846,7 @@
 		};
 		6B01971E46A898944C3B7FEC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_9F5F0B87-E36E-4832-9AC6-B78F2F71D223" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_D668B24C-C272-4964-B5D0-B63681ED7C38" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Resources/KlickKlick.entitlements;
@@ -880,7 +884,7 @@
 		};
 		AE0F2DE2B6837F30287A01D1 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = "TEMP_9F5F0B87-E36E-4832-9AC6-B78F2F71D223" /* Signing.xcconfig */;
+			baseConfigurationReference = "TEMP_D668B24C-C272-4964-B5D0-B63681ED7C38" /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Resources/KlickKlick.entitlements;
