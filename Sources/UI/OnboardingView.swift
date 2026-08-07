@@ -1,7 +1,10 @@
 import SwiftUI
 
-/// First-launch walkthrough explaining the app's core vocabulary —
-/// LINK / PAIR / PEER, TALK / CHAT / LISTEN, channels & settings.
+/// First-launch walkthrough — points at the real TALK screen instead of
+/// describing it. Each step dims a real screenshot (`OnboardingTalkScreen`
+/// in Assets.xcassets, the same capture used on the marketing site) except
+/// for a spotlighted region, so the user sees exactly what LINK/PAIR/PEER/
+/// TRANSMIT/SETTINGS look like before they ever open those screens.
 ///
 /// Shown automatically once (driven by `ContentView.hasSeenOnboarding`)
 /// and reopenable anytime via the `?` button in the brand strip. Owns no
@@ -12,42 +15,44 @@ struct OnboardingView: View {
 
     @State private var step = 0
 
+    /// Unit-space (0...1) boxes measured off `OnboardingTalkScreen`, so
+    /// they scale to whatever size the screenshot is rendered at.
     private let steps: [OnboardingStep] = [
         OnboardingStep(
-            icon: "shield.lefthalf.filled",
-            accent: DT.ok,
             title: "NO SERVERS.\nNO ACCOUNTS.",
-            body: "Klick connects your phone directly to another phone over WiFi or Bluetooth and encrypts every packet end-to-end. There's nothing to sign up for and nothing to sign in to."
+            caption: "Every packet is encrypted phone-to-phone — nothing to sign up for.",
+            accent: DT.ok,
+            highlight: nil
         ),
         OnboardingStep(
-            icon: "antenna.radiowaves.left.and.right",
+            title: "LINK GOES LIVE",
+            caption: "Tap LINK to switch on WiFi + Bluetooth so nearby phones can find you.",
             accent: DT.info,
-            title: "LINK\nGOES LIVE",
-            body: "Tap the LINK tile to switch on your radios. That's what makes you discoverable to nearby Klick devices — tap it again anytime to stop."
+            highlight: UnitRect(x: 0.041, y: 0.169, width: 0.287, height: 0.121)
         ),
         OnboardingStep(
-            icon: "lock.shield.fill",
+            title: "PAIR EXCHANGES A KEY",
+            caption: "Tap PAIR and scan a QR code to set up encryption with one device.",
             accent: DT.warn,
-            title: "PAIR\nEXCHANGES A KEY",
-            body: "Tap PAIR and show or scan a QR code with one other device. That one-time exchange sets up the encryption key you'll both use."
+            highlight: UnitRect(x: 0.354, y: 0.169, width: 0.289, height: 0.121)
         ),
         OnboardingStep(
-            icon: "iphone.gen3.radiowaves.left.and.right",
+            title: "PEER PICKS WHO YOU REACH",
+            caption: "Tap PEER to select who your next transmission goes to.",
             accent: DT.sys,
-            title: "PEER\nPICKS WHO YOU REACH",
-            body: "Once you're live, PEER lists everyone nearby. Select one, several, or everyone — that's who your next transmission or message goes to."
+            highlight: UnitRect(x: 0.670, y: 0.169, width: 0.289, height: 0.121)
         ),
         OnboardingStep(
-            icon: "dot.radiowaves.left.and.right",
-            accent: DT.navTalk,
-            title: "TALK · CHAT · LISTEN",
-            body: "Hold the button at the bottom to transmit voice. Switch to CHAT to type instead, or LISTEN to decode Morse from a camera or a mic."
+            title: "HOLD TO TALK",
+            caption: "Or switch to CHAT to type, or LISTEN to decode Morse.",
+            accent: DT.tx,
+            highlight: UnitRect(x: 0.041, y: 0.7725, width: 0.917, height: 0.1425)
         ),
         OnboardingStep(
-            icon: "slider.horizontal.3",
+            title: "CHANNELS & SETTINGS",
+            caption: "Group peers into a channel; tune region + relay in SETTINGS.",
             accent: DT.navSettings,
-            title: "CHANNELS &\nSETTINGS",
-            body: "Create a channel to group a crew under one key instead of re-picking peers each time. Settings holds region, discoverability, and mesh-relay options. Tap ? up top anytime to see this again."
+            highlight: UnitRect(x: 0.741, y: 0.121, width: 0.233, height: 0.029)
         ),
     ]
 
@@ -67,7 +72,7 @@ struct OnboardingView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
                 pageIndicator
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 18)
 
                 actionButton
                     .padding(.horizontal, 24)
@@ -98,34 +103,25 @@ struct OnboardingView: View {
     // MARK: - Step content
 
     private func stepContent(_ item: OnboardingStep) -> some View {
-        VStack(spacing: 28) {
+        VStack(spacing: 18) {
             Spacer(minLength: 0)
 
-            ZStack {
-                Rectangle()
-                    .fill(item.accent.opacity(0.15))
-                    .overlay(Rectangle().strokeBorder(item.accent, lineWidth: 1))
-                    .frame(width: 88, height: 88)
-                Image(systemName: item.icon)
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(item.accent)
-            }
+            SpotlightScreenshot(highlight: item.highlight, accent: item.accent)
+                .frame(width: 212, height: 212 * 2622.0 / 1206.0)
 
-            VStack(spacing: 14) {
+            VStack(spacing: 8) {
                 Text(item.title)
-                    .walkieLabel(22, weight: .heavy, tracking: 2)
-                    .foregroundStyle(DT.text)
+                    .walkieLabel(16, weight: .heavy, tracking: 1.6)
+                    .foregroundStyle(item.accent)
                     .multilineTextAlignment(.center)
 
-                TerminalFrame(accent: DT.border) {
-                    Text(item.body)
-                        .font(DT.mono(13, weight: .regular))
-                        .foregroundStyle(DT.textDim)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Text(item.caption)
+                    .font(DT.mono(12.5, weight: .regular))
+                    .foregroundStyle(DT.textDim)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 30)
             }
-            .padding(.horizontal, 28)
 
             Spacer(minLength: 0)
         }
@@ -170,11 +166,61 @@ struct OnboardingView: View {
     }
 }
 
-private struct OnboardingStep {
-    let icon: String
+/// A real screenshot with everything but `highlight` dimmed out — the
+/// "point at it" idiom, using an even-odd path to punch a clear window
+/// through a black scrim rather than four separately-positioned strips.
+private struct SpotlightScreenshot: View {
+    let highlight: UnitRect?
     let accent: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            let size = geo.size
+            ZStack {
+                Image("OnboardingTalkScreen")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: size.width, height: size.height)
+
+                if let highlight {
+                    let rect = CGRect(
+                        x: highlight.x * size.width,
+                        y: highlight.y * size.height,
+                        width: highlight.width * size.width,
+                        height: highlight.height * size.height
+                    ).insetBy(dx: -5, dy: -5)
+
+                    Path { path in
+                        path.addRect(CGRect(origin: .zero, size: size))
+                        path.addRect(rect)
+                    }
+                    .fill(Color.black.opacity(0.68), style: FillStyle(eoFill: true))
+
+                    Rectangle()
+                        .fill(accent.opacity(0.15))
+                        .overlay(Rectangle().strokeBorder(accent, lineWidth: 2))
+                        .frame(width: rect.width, height: rect.height)
+                        .position(x: rect.midX, y: rect.midY)
+                }
+            }
+        }
+        .overlay(RoundedRectangle(cornerRadius: DT.tileCorner).strokeBorder(DT.border, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: DT.tileCorner))
+    }
+}
+
+private struct UnitRect {
+    let x: CGFloat
+    let y: CGFloat
+    let width: CGFloat
+    let height: CGFloat
+}
+
+private struct OnboardingStep {
     let title: String
-    let body: String
+    let caption: String
+    let accent: Color
+    let highlight: UnitRect?
 }
 
 #Preview {
