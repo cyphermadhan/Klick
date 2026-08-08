@@ -169,7 +169,7 @@ struct ContentView: View {
                     .walkieLabel(11)
                     .foregroundStyle(DT.info)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: 90, alignment: .leading)
             }
             Rectangle().fill(DT.border).frame(width: 1, height: 12)
             // Codec + cipher badges — part of the terminal aesthetic.
